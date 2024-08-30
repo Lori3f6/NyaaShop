@@ -1,0 +1,9 @@
+name: NyaaShop
+main: cat.nyaa.nyaashop.NyaaShop
+version: ${version}
+api-version: 1.21
+libraries:
+  - "org.xerial:sqlite-jdbc:3.46.1.0"
+  - "org.jetbrains.kotlin:kotlin-stdlib:2.0.20"
+commands:
+  sst:
