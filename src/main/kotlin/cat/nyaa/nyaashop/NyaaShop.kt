@@ -7,7 +7,6 @@ import land.melon.lab.simplelanguageloader.SimpleLanguageLoader
 import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.java.JavaPlugin
-import java.util.*
 
 class NyaaShop : JavaPlugin() {
     companion object {
@@ -30,8 +29,9 @@ class NyaaShop : JavaPlugin() {
         reload()
     }
 
-    private fun reload() {
+    fun reload() {
         onDisable()
+        instance = this
 
         config = simpleLanguageLoader.loadOrInitialize(
             dataFolder.resolve("config.json"),
@@ -44,6 +44,8 @@ class NyaaShop : JavaPlugin() {
             ::Language
         )
 
+        getCommand("nyaashop")?.setExecutor(NyaaShopCommands(this))
+
         if (!setupEconomy())
             throw IllegalStateException("ECore not found")
 
@@ -51,14 +53,15 @@ class NyaaShop : JavaPlugin() {
             ShopDataManager(dataFolder.resolve("shops.sqlite3"), this)
 
         Bukkit.getPluginManager().registerEvents(dataManager, this)
-
-        instance = this
+        Bukkit.getPluginManager().registerEvents(ShopEventListener(this), this)
     }
 
     override fun onDisable() {
         Bukkit.getAsyncScheduler().cancelTasks(this)
         HandlerList.unregisterAll(this)
-        dataManager.shutdown()
+        if (::dataManager.isInitialized) {
+            dataManager.shutdown()
+        }
     }
 
     fun getShopDataManager(): ShopDataManager {

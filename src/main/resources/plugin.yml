@@ -6,4 +6,7 @@ libraries:
   - "org.xerial:sqlite-jdbc:3.46.1.0"
   - "org.jetbrains.kotlin:kotlin-stdlib:2.0.20"
 commands:
-  sst:
+  nyaashop:
+    description: NyaaShop main command
+    aliases:
+        - ns

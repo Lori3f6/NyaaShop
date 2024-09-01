@@ -1,6 +1,8 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
+import cat.nyaa.ukit.api.UKitAPI
+import land.melon.lab.simplelanguageloader.utils.LocaleUtils
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
@@ -14,9 +16,11 @@ import org.bukkit.entity.ItemDisplay
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.util.*
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 data class Shop(
-    val id: Int,
+    var id: Int,
     val ownerUniqueID: UUID,
     val worldUniqueID: UUID,
     val worldX: Int,
@@ -29,7 +33,7 @@ data class Shop(
     var price: Double
 ) {
     companion object {
-        private val shopIDPDCKey = NamespacedKey(NyaaShop.instance, "shop_id")
+        val shopIDPDCKey = NamespacedKey(NyaaShop.instance, "shop_id")
         fun isShopSign(sign: Sign): Boolean {
             return sign.persistentDataContainer.has(
                 shopIDPDCKey,
@@ -45,26 +49,26 @@ data class Shop(
         }
     }
 
-    fun getSignBlock(): Block {
+    private fun getSignBlock(): Block {
         return Bukkit.getWorld(worldUniqueID)
             ?.getBlockAt(worldX, worldY, worldZ) ?: throw IllegalStateException(
             "Block not exist"
         )
     }
 
-    fun getWallSign(): WallSign {
-        val block = getSignBlock()
-        if (block.state !is WallSign) {
+    private fun getWallSign(): WallSign {
+        val blockState = getSignBlock().state.blockData
+        if (blockState !is WallSign) {
             throw IllegalStateException("Shop block is not a wall sign!")
         }
-        return block.state as WallSign
+        return blockState
     }
 
-    fun getSignFacing(): BlockFace {
+    private fun getSignFacing(): BlockFace {
         return getWallSign().facing
     }
 
-    fun itemDisplayLocation(): Location {
+    private fun itemDisplayLocation(): Location {
         val baseBlock = getSignBlock().getRelative(getSignFacing().oppositeFace)
         return baseBlock.location.apply { add(0.5, 1.5, 0.5) }
     }
@@ -72,6 +76,33 @@ data class Shop(
     fun refreshItemDisplay(): ItemDisplay {
         clearItemDisplay()
         return createItemDisplay()
+    }
+
+    fun getRemainingStock(): Int {
+        return when (type) {
+            ShopType.BUY -> tradeLimit - stock
+            ShopType.SELL -> stock
+        }
+    }
+
+    fun distanceFrom(location: Location): Double {
+        if (location.world.uid != worldUniqueID) {
+            return Double.MAX_VALUE
+        }
+        return distanceFrom(
+            Triple(
+                worldX.toDouble(),
+                worldY.toDouble(),
+                worldZ.toDouble()
+            )
+        )
+    }
+
+    private fun distanceFrom(location: Triple<Double, Double, Double>): Double {
+        val (x, y, z) = location
+        return sqrt(
+            (x - worldX).pow(2) + (y - worldY).pow(2) + (z - worldZ).pow(2)
+        )
     }
 
     fun clearItemDisplay() {
@@ -88,7 +119,7 @@ data class Shop(
             }
     }
 
-    fun createItemDisplay(): ItemDisplay {
+    private fun createItemDisplay(): ItemDisplay {
         val location = itemDisplayLocation()
         val itemDisplay =
             location.world?.spawn(location, ItemDisplay::class.java)
@@ -100,7 +131,7 @@ data class Shop(
         return itemDisplay
     }
 
-    fun blockFaceIntoYaw(face: BlockFace): Float {
+    private fun blockFaceIntoYaw(face: BlockFace): Float {
         return when (face) {
             BlockFace.NORTH -> 0F
             BlockFace.EAST -> 90F
@@ -110,14 +141,50 @@ data class Shop(
         }
     }
 
+    fun writeShopIDPDC() {
+        val block = getSignBlock()
+        if (block.state !is Sign) {
+            throw IllegalStateException("Shop block is not a sign!")
+        }
+        val sign = block.state as Sign
+        sign.persistentDataContainer.set(
+            shopIDPDCKey,
+            PersistentDataType.INTEGER,
+            id
+        )
+        sign.persistentDataContainer.set(
+            UKitAPI.signEditLockTagKey,
+            PersistentDataType.BOOLEAN,
+            true
+        )
+        sign.update()
+    }
+
     fun updateSign() {
         val block = getSignBlock()
         if (block.state !is Sign) {
             throw IllegalStateException("Shop block is not a sign!")
         }
         val sign = block.state as Sign
-        sign.getSide(Side.FRONT).line(0,NyaaShop.instance.language.shop_sign_line1.produceAsComponent(
-            Pair.of("type", type.name)
-        ))
+        val signSide = sign.getSide(Side.FRONT)
+        for (i in 0..3) {
+            signSide.line(
+                i,
+                NyaaShop.instance.language.shop_sign[i].produceAsComponent(
+                    "type" to when (type) {
+                        ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.produce()
+                        ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.produce()
+                    },
+                    "item" to
+                            LocaleUtils.getTranslatableItemComponent(itemStack),
+                    "price" to price,
+                    "currencyName" to
+                            NyaaShop.instance.economyProvider.currencyNamePlural(),
+                    "remaining" to getRemainingStock()
+                ).also { Bukkit.broadcast(it) }
+            )
+        }
+        sign.isWaxed = true
+        sign.update()
     }
 }

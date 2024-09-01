@@ -12,19 +12,20 @@ import java.util.*
 
 class ShopDBService(private val sqliteFile: File) {
     private val initializeTableSQL = """
-        CREATE TABLE IF NOT EXISTS "shops" (
-        "id"	INTEGER NOT NULL UNIQUE,
-        "ownerUniqueID"	TEXT NOT NULL,
-        "worldUniqueID"	TEXT NOT NULL,
-        "worldX"	INTEGER NOT NULL,
-        "worldY"	INTEGER NOT NULL,
-        "worldZ"	INTEGER NOT NULL,
-        "type"	TEXT NOT NULL DEFAULT 'sell',
-        "itemSerializedAsBytesToBase64"	TEXT NOT NULL,
-        "stock"	INTEGER NOT NULL DEFAULT 0,
-        "tradeLimit"	INTEGER NOT NULL DEFAULT -1,
-        "price"	INTEGER NOT NULL DEFAULT 0
-        PRIMARY KEY("id" AUTOINCREMENT));
+    CREATE TABLE IF NOT EXISTS "shops" (
+	"id"	INTEGER NOT NULL UNIQUE,
+	"ownerUniqueID"	TEXT NOT NULL,
+	"worldUniqueID"	TEXT NOT NULL,
+	"worldX"	INTEGER NOT NULL,
+	"worldY"	INTEGER NOT NULL,
+	"worldZ"	INTEGER NOT NULL,
+	"type"	TEXT NOT NULL DEFAULT 'sell',
+	"itemSerializedAsBytesToBase64"	TEXT NOT NULL,
+	"stock"	INTEGER NOT NULL DEFAULT 0,
+	"tradeLimit"	INTEGER NOT NULL DEFAULT -1,
+	"price"	REAL NOT NULL DEFAULT 0,
+	PRIMARY KEY("id" AUTOINCREMENT)
+);
     """.trimIndent()
     private val initializeIndexSQL = """
         CREATE INDEX IF NOT EXISTS "OwnerUniqueIDIndex" ON "shops" (
@@ -106,11 +107,11 @@ class ShopDBService(private val sqliteFile: File) {
         }
     }
 
-    fun updateStock(shop: Shop) {
+    fun updateStock(shop: Shop, stock: Int) {
         getConnection().prepareStatement(
             "UPDATE shops SET stock = ? WHERE id = ?"
         ).use { statement ->
-            statement.setInt(1, shop.stock)
+            statement.setInt(1, stock)
             statement.setInt(2, shop.id)
             statement.execute()
         }
