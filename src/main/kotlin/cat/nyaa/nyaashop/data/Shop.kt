@@ -47,6 +47,12 @@ data class Shop(
                 PersistentDataType.INTEGER
             )
         }
+
+        fun clearShopIDPDC(sign: Sign) {
+            sign.persistentDataContainer.remove(shopIDPDCKey)
+            sign.persistentDataContainer.remove(UKitAPI.signEditLockTagKey)
+            sign.update()
+        }
     }
 
     private fun getSignBlock(): Block {
@@ -91,9 +97,9 @@ data class Shop(
         }
         return distanceFrom(
             Triple(
-                worldX.toDouble(),
-                worldY.toDouble(),
-                worldZ.toDouble()
+                location.x,
+                location.y,
+                location.z
             )
         )
     }
@@ -128,6 +134,10 @@ data class Shop(
         itemDisplay.displayWidth = 0.9F
         itemDisplay.displayHeight = 0.9F
         itemDisplay.setRotation(blockFaceIntoYaw(getSignFacing()), 0F)
+        itemDisplay.persistentDataContainer.set(
+            shopIDPDCKey,
+            PersistentDataType.INTEGER, id
+        )
         return itemDisplay
     }
 
@@ -170,8 +180,8 @@ data class Shop(
         for (i in 0..3) {
             signSide.line(
                 i,
-                NyaaShop.instance.language.shop_sign[i].produceAsComponent(
-                    "type" to when (type) {
+                NyaaShop.instance.language.shopSign[i].produceAsComponent(
+                    "title" to when (type) {
                         ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.produce()
                         ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.produce()
                     },
@@ -181,7 +191,7 @@ data class Shop(
                     "currencyName" to
                             NyaaShop.instance.economyProvider.currencyNamePlural(),
                     "remaining" to getRemainingStock()
-                ).also { Bukkit.broadcast(it) }
+                )
             )
         }
         sign.isWaxed = true

@@ -1,13 +1,12 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
+import cat.nyaa.nyaashop.Utils
 import cat.nyaa.nyaashop.data.db.ShopDBService
+import land.melon.lab.simplelanguageloader.utils.ItemUtils
+import org.bukkit.Bukkit
 import org.bukkit.block.Sign
-import org.bukkit.block.sign.Side
-import org.bukkit.event.EventHandler
-import org.bukkit.event.Listener
-import org.bukkit.event.world.ChunkLoadEvent
-import org.bukkit.event.world.ChunkUnloadEvent
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import java.io.File
 import java.util.*
@@ -16,10 +15,45 @@ import java.util.*
 class ShopDataManager(
     private val sqliteFile: File,
     private val pluginInstance: NyaaShop
-) : Listener {
+) {
     private val shopDBService: ShopDBService = ShopDBService(sqliteFile)
     private val loadedShopMap = mutableMapOf<Int, Shop>()
     private val shopSelectionMap = mutableMapOf<UUID, Int>()
+    private val changeItemButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.changeItemButtonText.produce(),
+        pluginInstance.language.changeItemButtonDescription.produce(),
+        "/ns set item "
+    )
+    private val changePriceButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.changePriceButtonText.produce(),
+        pluginInstance.language.changePriceButtonDescription.produce(),
+        "/ns set price "
+    )
+    private val addStockButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.addStockButtonText.produce(),
+        pluginInstance.language.addStockButtonDescription.produce(),
+        "/ns stock add "
+    )
+    private val retrieveStockButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.retrieveStockButtonText.produce(),
+        pluginInstance.language.retrieveStockButtonDescription.produce(),
+        "/ns stock retrieve "
+    )
+    private val changeTradeLimitButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.changeTradeLimitButtonText.produce(),
+        pluginInstance.language.changeTradeLimitButtonDescription.produce(),
+        "/ns set trade_limit "
+    )
+    private val buyTradeButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.buyTradeButtonText.produce(),
+        pluginInstance.language.buyTradeButtonDescription.produce(),
+        "/ns buy "
+    )
+    private val sellTradeButton = Utils.suggestCommandButtonOf(
+        pluginInstance.language.sellTradeButtonText.produce(),
+        pluginInstance.language.sellTradeButtonDescription.produce(),
+        "/ns sell "
+    )
 
     init {
         //load all sign shop from loaded chunks
@@ -42,7 +76,7 @@ class ShopDataManager(
         }
     }
 
-    fun getPlayerSelectedShop(player: UUID): Int? {
+    fun getPlayerSelectedShopID(player: UUID): Int? {
         return shopSelectionMap[player]
     }
 
@@ -67,7 +101,6 @@ class ShopDataManager(
     private fun updateShopMetaToDB(shop: Shop) {
         loadedShopMap[shop.id] = shop
         shopDBService.updateShopMeta(shop)
-        shop.refreshItemDisplay()
     }
 
     fun updateTradeLimit(shopID: Int, tradeLimit: Int) {
@@ -93,7 +126,6 @@ class ShopDataManager(
         if (shopData != null) {
             shopData.itemStack = itemStack
             updateShopMetaToDB(shopData)
-            shopData.refreshItemDisplay()
             shopData.updateSign()
         }
     }
@@ -111,7 +143,7 @@ class ShopDataManager(
         val shopData = loadedShopMap[shopID]
         if (shopData != null) {
             shopData.stock = stock
-            updateShopMetaToDB(shopData)
+            shopDBService.updateStock(shopData, stock)
             shopData.updateSign()
         }
     }
@@ -134,53 +166,70 @@ class ShopDataManager(
         )
     }
 
-    private fun loadShop(
+    fun sendShopDetailsMessageForOwner(player: Player, shop: Shop) {
+        player.sendMessage(
+            pluginInstance.language.shopInteractOwner.produceAsComponent(
+                "shopTitle" to when (shop.type) {
+                    ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
+                    ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
+                },
+                "id" to shop.id,
+                "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                "changeItemButton" to changeItemButton,
+                "price" to shop.price,
+                "changePriceButton" to changePriceButton,
+                "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
+                "stock" to shop.stock,
+                "addStockButton" to addStockButton,
+                "retrieveStockButton" to retrieveStockButton,
+                "tradeLimit" to shop.tradeLimit,
+                "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
+                "changeTradeLimitButton" to changeTradeLimitButton
+            )
+        )
+    }
+
+    fun sendShopDetailsMessageForGuest(player: Player, shop: Shop) {
+        player.sendMessage(
+            pluginInstance.language.shopInteractGuest.produceAsComponent(
+                "shopTitle" to when (shop.type) {
+                    ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
+                    ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
+                },
+                "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
+                "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                "price" to shop.price,
+                "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
+                "stock" to shop.stock,
+                "tradeButton" to when (shop.type) {
+                    ShopType.SELL -> buyTradeButton
+                    ShopType.BUY -> sellTradeButton
+                }
+            )
+        )
+    }
+
+    fun loadShop(
         shopID: Int,
         refreshItemDisplay: Boolean = false
-    ): Boolean {
-        val shop = shopDBService.getShopDataFromShopID(shopID) ?: return false
+    ): Shop? {
+        val shop = shopDBService.getShopDataFromShopID(shopID) ?: return null
         loadedShopMap[shopID] = shop
         if (refreshItemDisplay) {
             shop.refreshItemDisplay()
+            shop.updateSign()
         }
         pluginInstance.logger.info("Loaded shop #$shopID")
-        return true
+        return shop
     }
 
-    private fun unloadShop(shopID: Int) {
+    fun unloadShop(shopID: Int) {
         loadedShopMap.remove(shopID)
         pluginInstance.logger.info("Unloaded shop #$shopID")
     }
 
     private fun cleanUpSign(sign:Sign){
         sign.persistentDataContainer.remove(Shop.shopIDPDCKey)
-    }
-
-    @EventHandler
-    public fun onChunkLoad(event: ChunkLoadEvent) {
-        // load all the shops into memory on chunk loading
-        // by filtering all the tile entity and check if it is a shop sign
-        // and load them into memory
-        event.chunk.tileEntities.filterIsInstance<Sign>().forEach { sign ->
-            if (Shop.isShopSign(sign)) {
-                val shopID = Shop.getShopIDFromSign(sign) ?: return@forEach
-                val shopExist = loadShop(shopID)
-                if(!shopExist){
-
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public fun onChunkUnload(event: ChunkUnloadEvent) {
-        // remove all the shops from memory on chunk unloading
-        event.chunk.tileEntities.filterIsInstance<Sign>().forEach { sign ->
-            if (Shop.isShopSign(sign)) {
-                val shopID = Shop.getShopIDFromSign(sign) ?: return@forEach
-                unloadShop(shopID)
-            }
-        }
     }
 
     fun shutdown() {

@@ -2,10 +2,10 @@ package cat.nyaa.nyaashop
 
 class Config {
     val playerMaximumShop = 32
-    val shopInteractiveRange = 5.0
+    val shopInteractiveRange = 10
     val shopTradeFeeRateBuyInDouble = 0.02
     val shopTradeFeeRateSellInDouble = 0.02
-    val shopInventoryCapacity = 27 * 64
+    val shopInventoryCapacity = 6 * 9 * 64 // big chest
     val shopCreationSellHeader = listOf("[sell]")
     val shopCreationBuyHeader = listOf("[buy]")
 }

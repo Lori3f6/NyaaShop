@@ -44,15 +44,14 @@ class NyaaShop : JavaPlugin() {
             ::Language
         )
 
-        getCommand("nyaashop")?.setExecutor(NyaaShopCommands(this))
-
         if (!setupEconomy())
             throw IllegalStateException("ECore not found")
 
         dataManager =
             ShopDataManager(dataFolder.resolve("shops.sqlite3"), this)
 
-        Bukkit.getPluginManager().registerEvents(dataManager, this)
+        getCommand("nyaashop")?.setExecutor(NyaaShopCommands(this))
+
         Bukkit.getPluginManager().registerEvents(ShopEventListener(this), this)
     }
 
@@ -71,7 +70,7 @@ class NyaaShop : JavaPlugin() {
     private fun setupEconomy(): Boolean {
         try {
             Class.forName("cat.nyaa.ecore.EconomyCore")
-        } catch (e: ClassNotFoundException) {
+        } catch (_: ClassNotFoundException) {
             return false
         }
 

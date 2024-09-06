@@ -1,15 +1,24 @@
 package cat.nyaa.nyaashop
 
+import cat.nyaa.ecore.ServiceFeePreference
+import cat.nyaa.nyaashop.Utils.Companion.hasAtLeast
+import cat.nyaa.nyaashop.Utils.Companion.removeItem
+import cat.nyaa.nyaashop.Utils.Companion.tryToAddItem
+import cat.nyaa.nyaashop.data.ShopType
+import land.melon.lab.simplelanguageloader.utils.ItemUtils
+import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.TabExecutor
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
 import org.bukkit.inventory.EquipmentSlot
+import java.util.UUID
 
 class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
     Listener {
     private val shopDataManager = pluginInstance.getShopDataManager()
+    private val adminPermissionNode = "nyaashop.admin"
 
     override fun onTabComplete(
         sender: CommandSender,
@@ -17,7 +26,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         label: String,
         args: Array<out String>?
     ): MutableList<String>? {
-        TODO("Not yet implemented")
+        return mutableListOf()
     }
 
     private fun sendHelpAndReturn(sender: CommandSender): Boolean {
@@ -36,26 +45,26 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         }
 
         if (args[0].equals("reload", true)) {
-            if (sender.hasPermission("nyaashop.admin")) {
+            if (sender.hasPermission(adminPermissionNode)) {
                 pluginInstance.reload()
-                sender.sendMessage(pluginInstance.language.plugin_reloaded.produce())
+                sender.sendMessage(pluginInstance.language.pluginReloaded.produce())
             } else {
-                sender.sendMessage(pluginInstance.language.permission_denied.produce())
+                sender.sendMessage(pluginInstance.language.permissionDenied.produce())
             }
             return true
         }
 
         if (sender !is Player) {
-            sender.sendMessage(pluginInstance.language.player_only_command.produce())
+            sender.sendMessage(pluginInstance.language.playerOnlyCommand.produce())
             return true //ignore entity call other than player
         }
 
         val senderPlayer = sender
         val selectedShopID =
-            shopDataManager.getPlayerSelectedShop(senderPlayer.uniqueId)
+            shopDataManager.getPlayerSelectedShopID(senderPlayer.uniqueId)
         val shop = selectedShopID?.let { shopDataManager.getShopData(it) }
         if (shop == null) {
-            sender.sendMessage(pluginInstance.language.shop_not_valid.produce())
+            sender.sendMessage(pluginInstance.language.shopNotValid.produce())
             shopDataManager.clearPlayerSelectedShop(senderPlayer.uniqueId)
             return true
         }
@@ -63,65 +72,328 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         when (args[0]) {
             "set" -> {
                 if (shop.ownerUniqueID != senderPlayer.uniqueId) {
-                    sender.sendMessage(pluginInstance.language.cant_change_others_shop.produce())
+                    sender.sendMessage(pluginInstance.language.cantChangeOthersShop.produce())
                     return true
                 }
-                if (args.size < 2) {
+                if (args.size < 3) {
                     return sendHelpAndReturn(sender)
                 }
                 when (args[1]) {
                     "item" -> {
-                        val slot = if (args.size > 2) {
-                            if (args[2].equals(
-                                    "mainhand",
-                                    true
-                                )
-                            ) EquipmentSlot.HAND else EquipmentSlot.OFF_HAND
-                        } else {
-                            EquipmentSlot.HAND
-                        }
-                        val item = senderPlayer.inventory.getItem(slot)
+                        val slot = if (args[2].equals(
+                                "offhand",
+                                true
+                            )
+                        ) EquipmentSlot.OFF_HAND else EquipmentSlot.HAND
+                        val item = senderPlayer.inventory.getItem(slot).asOne()
                         if (item.type.isAir) {
-                            sender.sendMessage(pluginInstance.language.unable_to_change_item_to_air.produce())
+                            sender.sendMessage(pluginInstance.language.unableToChangeItemToAir.produce())
                             return true
                         }
                         if (shop.getRemainingStock() != 0) {
-                            sender.sendMessage(pluginInstance.language.unable_to_change_item_stock.produce())
+                            sender.sendMessage(pluginInstance.language.unableToChangeItemStock.produce())
                             return true
                         }
                         shopDataManager.updateItemStack(shop.id, item)
-                        shop.refreshItemDisplay()
-                        shop.updateSign()
+                        shopDataManager.sendShopDetailsMessageForOwner(
+                            senderPlayer,
+                            shop
+                        )
                     }
-
                     "price" -> {
-                        TODO()
+                        val price = args[2].toDoubleOrNull()
+                        if (price == null) {
+                            sender.sendMessage(pluginInstance.language.notValidNumber.produce())
+                            return true
+                        }
+                        shopDataManager.updatePrice(shop.id, price)
+                        shopDataManager.sendShopDetailsMessageForOwner(
+                            senderPlayer,
+                            shop
+                        )
                     }
 
-                    "tradlimit" -> {
-                        TODO()
+                    "tradelimit" -> {
+                        val tradeLimit = args[2].toIntOrNull()
+                        if (tradeLimit == null) {
+                            sender.sendMessage(pluginInstance.language.notValidNumber.produce())
+                            return true
+                        }
+                        if (tradeLimit > pluginInstance.config.shopInventoryCapacity) {
+                            sender.sendMessage(
+                                pluginInstance.language.tradeLimitTooHigh.produce(
+                                    "inventoryCapacity" to pluginInstance.config.shopInventoryCapacity
+                                )
+                            )
+                            return true
+                        }
+                        shopDataManager.updateTradeLimit(shop.id, tradeLimit)
+                        shopDataManager.sendShopDetailsMessageForOwner(
+                            senderPlayer,
+                            shop
+                        )
+                    }
+                    else -> return sendHelpAndReturn(sender)
+                }
+            }
+
+            "stock" -> { //ns stock add 1
+                if (args.size < 3) {
+                    return sendHelpAndReturn(sender)
+                }
+                val itemAmount = args[2].toIntOrNull()
+                if (itemAmount == null) {
+                    sender.sendMessage(
+                        pluginInstance.language.notValidNumber.produce(
+                            "number" to args[2]
+                        )
+                    )
+                    return true
+                }
+                when (args[1]) {
+                    "add" -> {
+                        val availableStockSpace =
+                            pluginInstance.config.shopInventoryCapacity - shop.stock
+                        if (itemAmount > availableStockSpace) {
+                            sender.sendMessage(
+                                pluginInstance.language.addStockFailedCapacityExceed.produce(
+                                    "capacity" to availableStockSpace
+                                )
+                            )
+                            return true
+                        }
+                        val item = shop.itemStack
+                        if (!senderPlayer.hasAtLeast(item)
+                        ) {
+                            sender.sendMessage(
+                                pluginInstance.language.requestFailedItemNotEnough.produceAsComponent(
+                                    "item" to ItemUtils.itemTextWithHover(item),
+                                    "amount" to itemAmount
+                                )
+                            )
+                            return true
+                        }
+                        val itemToRemove =
+                            item.clone().apply { amount = itemAmount }
+                        senderPlayer.removeItem(itemToRemove)
+                        shopDataManager.updateStock(
+                            shop.id,
+                            shop.stock + itemAmount
+                        )
+                        sender.sendMessage(
+                            pluginInstance.language.stockAdded.produceAsComponent(
+                                "item" to ItemUtils.itemTextWithHover(item),
+                                "amount" to itemAmount,
+                                "stock" to shop.stock,
+                                "capacity" to pluginInstance.config.shopInventoryCapacity
+                            )
+                        )
+                    }
+                    "retrieve" -> {
+                        if (itemAmount > shop.stock) {
+                            sender.sendMessage(
+                                pluginInstance.language.retrieveStockFailedStockNotEnough.produce(
+                                    "stock" to shop.stock
+                                )
+                            )
+                            return true
+                        }
+                        val item = shop.itemStack
+                        val itemToAdd =
+                            item.clone().apply { amount = itemAmount }
+                        val itemsAdded =
+                            senderPlayer.tryToAddItem(itemToAdd)
+                        shopDataManager.updateStock(
+                            shop.id,
+                            shop.stock - itemsAdded
+                        )
+                        sender.sendMessage(
+                            pluginInstance.language.stockRetrieved.produceAsComponent(
+                                "item" to ItemUtils.itemTextWithHover(item),
+                                "amount" to itemsAdded,
+                                "stock" to shop.stock,
+                                "capacity" to pluginInstance.config.shopInventoryCapacity
+                            )
+                        )
+                        if (itemToAdd.amount != itemsAdded) {
+                            sender.sendMessage(pluginInstance.language.requestCantFullyComply.produce())
+                        }
                     }
 
                     else -> return sendHelpAndReturn(sender)
                 }
             }
 
-            "stock" -> {
-                when (args[1]) {
-                    "add" -> {
-                        TODO()
-                    }
+            "buy" -> {
+                if (shop.type != ShopType.SELL) {
+                    sender.sendMessage(
+                        pluginInstance.language.unMatchedShopType.produce(
+                            "shopTitle" to pluginInstance.language.sellShopTitle.produce()
+                        )
+                    )
+                    return true
+                }
+                if (args.size < 2) {
+                    return sendHelpAndReturn(sender)
+                }
+                val itemAmount = args[1].toIntOrNull()
+                if (itemAmount == null) {
+                    sender.sendMessage(
+                        pluginInstance.language.notValidNumber.produce(
+                            "number" to args[1]
+                        )
+                    )
+                    return true
+                }
+                if (itemAmount <= 0) {
+                    sender.sendMessage(pluginInstance.language.notValidNumber.produce())
+                    return true
+                }
+                if (shop.stock < itemAmount) {
+                    sender.sendMessage(pluginInstance.language.merchantOutOfStock.produce())
+                    return true
+                }
+                val moneyNeed =
+                    shop.price * (pluginInstance.config.shopTradeFeeRateSellInDouble + 1) * itemAmount
+                if (pluginInstance.economyProvider.getPlayerBalance(senderPlayer.uniqueId) < moneyNeed) {
+                    sender.sendMessage(
+                        pluginInstance.language.playerNotEnoughMoney.produce(
+                            "money" to moneyNeed,
+                            "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
+                        )
+                    )
+                    return true
+                }
+                val item = shop.itemStack
+                val itemToAdd = item.clone().apply { setAmount(itemAmount) }
+                val itemAdded = senderPlayer.tryToAddItem(itemToAdd)
 
-                    "retrieve" -> {
-                        TODO()
-                    }
+                val tradeResult = pluginInstance.economyProvider.playerTrade(
+                    senderPlayer.uniqueId,
+                    shop.ownerUniqueID,
+                    shop.price * itemAdded,
+                    pluginInstance.config.shopTradeFeeRateSellInDouble,
+                    ServiceFeePreference.ADDITIONAL
+                ) // this one should only success due to the balance has checked, otherwise it might be some exception happens
+
+                if (!tradeResult.isSuccess) {
+                    pluginInstance.logger.warning("Failed to trade between ${tradeResult.receipt.payer} and ${tradeResult.receipt.receiver}, reason: ${tradeResult.status()}")
+                    senderPlayer.removeItem(
+                        item.clone().apply { amount = itemAdded })
+                    senderPlayer.sendMessage(
+                        pluginInstance.language.transactionFailedUnknown.produce()
+                    )
+                    return true
+                }
+
+                shopDataManager.updateStock(shop.id, shop.stock - itemAdded)
+
+                sender.sendMessage(
+                    pluginInstance.language.buySuccessNotice.produceAsComponent(
+                        "item" to ItemUtils.itemTextWithHover(item),
+                        "amount" to itemAdded,
+                        "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
+                        "cost" to tradeResult.receipt.amountTotally,
+                        "tax" to tradeResult.receipt.feeTotally,
+                        "taxPercentage" to pluginInstance.config.shopTradeFeeRateSellInDouble * 100,
+                        "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
+                    )
+                )
+                if (itemToAdd.amount != itemAdded) {
+                    sender.sendMessage(pluginInstance.language.requestCantFullyComply.produce())
                 }
             }
 
-            "buy" -> {
-                TODO()
+            "sell" -> {
+                if (shop.type != ShopType.BUY) {
+                    sender.sendMessage(
+                        pluginInstance.language.unMatchedShopType.produce(
+                            "shopTitle" to pluginInstance.language.buyShopTitle.produce()
+                        )
+                    )
+                    return true
+                }
+                if (args.size < 2) {
+                    return sendHelpAndReturn(sender)
+                }
+                val itemAmount = args[1].toIntOrNull()
+                if (itemAmount == null) {
+                    sender.sendMessage(
+                        pluginInstance.language.notValidNumber.produce(
+                            "number" to args[1]
+                        )
+                    )
+                    return true
+                }
+                if (itemAmount <= 0) {
+                    sender.sendMessage(pluginInstance.language.notValidNumber.produce())
+                    return true
+                }
+                val item = shop.itemStack
+                val itemToRemove = item.clone().apply { amount = itemAmount }
+                if (!senderPlayer.hasAtLeast(itemToRemove)) {
+                    sender.sendMessage(
+                        pluginInstance.language.requestFailedItemNotEnough.produceAsComponent(
+                            "item" to ItemUtils.itemTextWithHover(item)
+                        )
+                    )
+                    return true
+                }
+                if ((itemAmount + shop.stock) > pluginInstance.config.shopInventoryCapacity) {
+                    sender.sendMessage(
+                        pluginInstance.language.merchantStorageFull.produce()
+                    )
+                    return true
+                }
+                if (!checkBalance(
+                        shop.ownerUniqueID,
+                        shop.price * itemAmount * (1 + pluginInstance.config.shopTradeFeeRateBuyInDouble)
+                    )
+                ) {
+                    sender.sendMessage(
+                        pluginInstance.language.merchantNotEnoughMoney.produce()
+                    )
+                    return true
+                }
+
+                val itemRemoved = senderPlayer.removeItem(itemToRemove)
+
+                val tradeResult = pluginInstance.economyProvider.playerTrade(
+                    shop.ownerUniqueID,
+                    senderPlayer.uniqueId,
+                    shop.price * itemAmount,
+                    pluginInstance.config.shopTradeFeeRateBuyInDouble,
+                    ServiceFeePreference.ADDITIONAL
+                ) // this one should only success due to the balance has checked, otherwise it might be some exception happens
+
+                if (!tradeResult.isSuccess) {
+                    pluginInstance.logger.warning("Failed to trade between ${tradeResult.receipt.payer} and ${tradeResult.receipt.receiver}, reason: ${tradeResult.status()}")
+                    senderPlayer.inventory.addItem(
+                        item.clone().apply { amount = itemAmount })
+                    sender.sendMessage(
+                        pluginInstance.language.transactionFailedUnknown.produce()
+                    )
+                    return true
+                }
+                shopDataManager.updateStock(shop.id, shop.stock + itemAmount)
+
+                sender.sendMessage(
+                    pluginInstance.language.sellSuccessNotice.produceAsComponent(
+                        "item" to ItemUtils.itemTextWithHover(item),
+                        "amount" to itemAmount,
+                        "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
+                        "cost" to tradeResult.receipt.amountTotally,
+                        "tax" to tradeResult.receipt.feeTotally,
+                        "taxPercentage" to pluginInstance.config.shopTradeFeeRateBuyInDouble * 100,
+                        "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
+                    )
+                )
             }
         }
         return true
+    }
+
+    private fun checkBalance(accountUniqueID: UUID, amount: Double): Boolean {
+        return pluginInstance.economyProvider.getPlayerBalance(accountUniqueID) >= amount
     }
 }

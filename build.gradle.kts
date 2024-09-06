@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("land.melon.lab:simplelanguageloader:1.13.7")
+    implementation("land.melon.lab:simplelanguageloader:1.13.8")
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     compileOnly("org.xerial:sqlite-jdbc:3.46.1.0")
     compileOnly("cat.nyaa:ecore:0.3.4")
@@ -24,7 +24,7 @@ dependencies {
 tasks.shadowJar {
     archiveClassifier.set("shaded")
     dependencies {
-        include(dependency("land.melon.lab:simplelanguageloader:1.13.7"))  // Replace with the actual dependency you want to shade
+        include(dependency("land.melon.lab:simplelanguageloader:1.13.8"))
     }
 }
 
