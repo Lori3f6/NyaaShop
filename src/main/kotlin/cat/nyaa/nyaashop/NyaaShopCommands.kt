@@ -9,6 +9,7 @@ import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
+import org.bukkit.command.ConsoleCommandSender
 import org.bukkit.command.TabExecutor
 import org.bukkit.entity.Player
 import org.bukkit.event.Listener
@@ -26,6 +27,78 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         label: String,
         args: Array<out String>?
     ): MutableList<String>? {
+        if (sender is ConsoleCommandSender)
+            return mutableListOf("reload")
+        if (sender !is Player)
+            return null
+
+        val selectedShopID =
+            shopDataManager.getPlayerSelectedShopID(sender.uniqueId)
+        val selectedShop =
+            selectedShopID?.let { shopDataManager.getShopData(it) }
+                ?: return mutableListOf("list")
+
+        if (selectedShop.ownerUniqueID == sender.uniqueId) {
+            // ns set item <mainhand|offhand>
+            // ns set price <price>
+            // ns set tradelimit <tradelimit>
+            // ns stock <add|retrieve> <number>
+            if (args.isNullOrEmpty() || args.size == 1) {
+                return mutableListOf("set", "stock")
+            }
+            if (args.size == 2) {
+                return when (args[0]) {
+                    "set" -> mutableListOf("item", "price", "tradelimit")
+                    "stock" -> mutableListOf("add", "retrieve")
+                    else -> mutableListOf()
+                }.filter { it.startsWith(args[1]) }.toMutableList()
+            }
+            if (args.size == 3) {
+                return when (args[0]) {
+                    "set" -> when (args[1]) {
+                        "item" -> mutableListOf("mainhand", "offhand")
+                        else -> mutableListOf("<amount...>")
+                    }
+
+                    "stock" -> when (args[1]) {
+                        "add" -> mutableListOf("<amount...>")
+                        "retrieve" -> mutableListOf("<amount...>")
+                        else -> mutableListOf()
+                    }
+
+                    else -> mutableListOf()
+                }.filter { it.startsWith(args[2]) }.toMutableList()
+            }
+
+        } else {
+            //ns buy <number> if type = sell
+            //ns sell <number> if type = buy
+            if (args.isNullOrEmpty() || args.size == 1) {
+                return when (selectedShop.type) {
+                    ShopType.SELL -> mutableListOf("buy")
+                    ShopType.BUY -> mutableListOf("sell")
+                }.filter { it.startsWith(args?.get(0) ?: "") }.toMutableList()
+            }
+            if (args.size == 2) {
+                return when (args[0]) {
+                    "buy" -> mutableListOf("<amount...>").filter {
+                        it.startsWith(
+                            args[1]
+                        )
+                    }.toMutableList()
+
+                    "sell" ->
+                        mutableListOf("<amount...>").filter {
+                            it.startsWith(
+                                args[1]
+                            )
+                        }.toMutableList()
+
+                    else -> mutableListOf()
+
+                }
+            }
+        }
         return mutableListOf()
     }
 
@@ -90,7 +163,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             sender.sendMessage(pluginInstance.language.unableToChangeItemToAir.produce())
                             return true
                         }
-                        if (shop.getRemainingStock() != 0) {
+                        if (shop.stock != 0) {
                             sender.sendMessage(pluginInstance.language.unableToChangeItemStock.produce())
                             return true
                         }
@@ -227,7 +300,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
             "buy" -> {
                 if (shop.type != ShopType.SELL) {
                     sender.sendMessage(
-                        pluginInstance.language.unMatchedShopType.produce(
+                        pluginInstance.language.unMatchedShopType.produceAsComponent(
                             "shopTitle" to pluginInstance.language.sellShopTitle.produce()
                         )
                     )
@@ -327,6 +400,10 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                 }
                 if (itemAmount <= 0) {
                     sender.sendMessage(pluginInstance.language.notValidNumber.produce())
+                    return true
+                }
+                if (itemAmount > shop.getRemainingStock()) {
+                    sender.sendMessage(pluginInstance.language.merchantStorageFull.produce())
                     return true
                 }
                 val item = shop.itemStack

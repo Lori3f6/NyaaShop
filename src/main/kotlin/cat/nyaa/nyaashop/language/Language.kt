@@ -24,7 +24,15 @@ class Language {
         Text.of("{price} {currencyName}"),
         Text.of("{remaining} Remaining")
     )
-    val shopInteractOwner = Text.of(
+    val shopInteractOwnerBuy = Text.of(
+        "&7You are viewing your {shopTitle} &8(&3#{id}&8)&7:",
+        "&7Item: &6{item} {changeItemButton}",
+        "&7Price: &6{price} {currencyName} {changePriceButton}",
+        "&7Stock: &6{stock} {addStockButton} {retrieveStockButton}",
+        "&7Trade Limit (only valid for {buyShopTitle}): &6{tradeLimit} {changeTradeLimitButton}",
+        "&7Click to manage your shop"
+    )
+    val shopInteractOwnerSell = Text.of(
         "&7You are viewing your {shopTitle} &8(&3#{id}&8)&7:",
         "&7Item: &6{item} {changeItemButton}",
         "&7Price: &6{price} {currencyName} {changePriceButton}",
@@ -39,9 +47,7 @@ class Language {
         "&7Stock: &6{stock} {tradeButton}",
     )
     val playerLeaveShop = Text.of("You left the shop {shopID}")
-    val shopNotSelected =
-        Text.of("You have not selected a shop, right click one to select")
-    val shopNotValid = Text.of("The shop you selected is not valid now")
+    val shopNotValid = Text.of("You have not selected a shop or the shop you selected is invalid now, right click one to select")
     val cantChangeOthersShop =
         Text.of("You can't change the setting of other player's shop")
     val changeItemButtonText = Text.of("&7[&6Change Item&7]")
@@ -102,4 +108,5 @@ class Language {
     val merchantOutOfStock = Text.of("The merchant doesn't have enough stock to complete this purchase")
     val merchantStorageFull = Text.of("The merchant's storage is full or the stock reach the reade limit")
     val transactionFailedUnknown = Text.of("Transaction failed due to unknown reason")
+    val tooManyShops = Text.of("You have {limit} shops already and can't create more, use &b/ns list&7 to see and manage your shops")
 }

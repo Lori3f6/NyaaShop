@@ -4,7 +4,9 @@ import cat.nyaa.nyaashop.NyaaShop
 import cat.nyaa.ukit.api.UKitAPI
 import land.melon.lab.simplelanguageloader.utils.LocaleUtils
 import org.bukkit.Bukkit
+import org.bukkit.DyeColor
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -15,6 +17,7 @@ import org.bukkit.entity.Display
 import org.bukkit.entity.ItemDisplay
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
+import org.joml.Matrix4f
 import java.util.*
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -54,6 +57,29 @@ data class Shop(
             sign.update()
         }
     }
+
+    private val blockDisplayMatrix = Matrix4f(
+        0.283f,
+        0.032f,
+        0.335f,
+        0.19f,
+        -0.184f,
+        0.381f,
+        0.119f,
+        0.29f,
+        -0.282f,
+        -0.217f,
+        0.259f,
+        0.61f,
+        0f,
+        0f,
+        0f,
+        1f
+    )
+
+    private val itemDisplayMatrix = Matrix4f(
+        0.5f, 0f, 0f, 0f, 0f, 0.5f, 0f, 0f, 0f, 0f, 0.5f, 0f, 0f, 0f, 0f, 1f
+    )
 
     private fun getSignBlock(): Block {
         return Bukkit.getWorld(worldUniqueID)
@@ -131,14 +157,22 @@ data class Shop(
             location.world?.spawn(location, ItemDisplay::class.java)
         itemDisplay!!.setItemStack(itemStack)
         itemDisplay.billboard = Display.Billboard.FIXED
-        itemDisplay.displayWidth = 0.9F
-        itemDisplay.displayHeight = 0.9F
+        itemDisplay.setTransformationMatrix(
+            if(isSellingBlock())
+                blockDisplayMatrix
+            else
+                itemDisplayMatrix
+        )
         itemDisplay.setRotation(blockFaceIntoYaw(getSignFacing()), 0F)
         itemDisplay.persistentDataContainer.set(
             shopIDPDCKey,
             PersistentDataType.INTEGER, id
         )
         return itemDisplay
+    }
+
+    private fun isSellingBlock(): Boolean {
+        return itemStack.type.isBlock
     }
 
     private fun blockFaceIntoYaw(face: BlockFace): Float {

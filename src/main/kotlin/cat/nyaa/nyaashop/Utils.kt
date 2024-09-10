@@ -23,9 +23,9 @@ class Utils {
             command: String
         ): Component {
             return suggestCommandButtonOf(
-                LegacyComponentSerializer.legacyAmpersand()
+                LegacyComponentSerializer.legacySection()
                     .deserialize(buttonText),
-                LegacyComponentSerializer.legacyAmpersand()
+                LegacyComponentSerializer.legacySection()
                     .deserialize(hoverText),
                 command
             )

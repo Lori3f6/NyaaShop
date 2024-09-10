@@ -173,7 +173,7 @@ class ShopDBService(private val sqliteFile: File) {
         }
     }
 
-    fun getShopsByPlayerUniqueID(playerUniqueID: UUID): List<Shop> {
+    fun getPlayerCreatedShops(playerUniqueID: UUID): List<Shop> {
         val shopList = mutableListOf<Shop>()
         getConnection().prepareStatement("SELECT * FROM shops WHERE ownerUniqueID = ?")
             .use { statement ->
@@ -201,6 +201,18 @@ class ShopDBService(private val sqliteFile: File) {
                 }
             }
         return shopList
+    }
+
+    fun countPlayerCreatedShops(playerUniqueID: UUID): Int {
+        getConnection().prepareStatement("SELECT COUNT(*) FROM shops WHERE ownerUniqueID = ?")
+            .use { statement ->
+                statement.setString(1, playerUniqueID.toString())
+                val resultSet = statement.executeQuery()
+                if (resultSet.next()) {
+                    return resultSet.getInt(1)
+                }
+            }
+        return 0
     }
 
     fun getPlayerShopNumbers(playerUniqueID: UUID): Int {

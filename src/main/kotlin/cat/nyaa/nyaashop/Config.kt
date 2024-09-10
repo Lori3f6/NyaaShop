@@ -1,7 +1,7 @@
 package cat.nyaa.nyaashop
 
 class Config {
-    val playerMaximumShop = 32
+    val maximumShopsPerPlayer = 32
     val shopInteractiveRange = 10
     val shopTradeFeeRateBuyInDouble = 0.02
     val shopTradeFeeRateSellInDouble = 0.02

@@ -22,7 +22,7 @@ class ShopDataManager(
     private val changeItemButton = Utils.suggestCommandButtonOf(
         pluginInstance.language.changeItemButtonText.produce(),
         pluginInstance.language.changeItemButtonDescription.produce(),
-        "/ns set item "
+        "/ns set item mainhand"
     )
     private val changePriceButton = Utils.suggestCommandButtonOf(
         pluginInstance.language.changePriceButtonText.produce(),
@@ -41,8 +41,10 @@ class ShopDataManager(
     )
     private val changeTradeLimitButton = Utils.suggestCommandButtonOf(
         pluginInstance.language.changeTradeLimitButtonText.produce(),
-        pluginInstance.language.changeTradeLimitButtonDescription.produce(),
-        "/ns set trade_limit "
+        pluginInstance.language.changeTradeLimitButtonDescription.produce(
+            "sellShopTitle" to pluginInstance.language.sellShopTitle.produce()
+        ),
+        "/ns set tradelimit "
     )
     private val buyTradeButton = Utils.suggestCommandButtonOf(
         pluginInstance.language.buyTradeButtonText.produce(),
@@ -127,6 +129,7 @@ class ShopDataManager(
             shopData.itemStack = itemStack
             updateShopMetaToDB(shopData)
             shopData.updateSign()
+            shopData.refreshItemDisplay()
         }
     }
 
@@ -153,6 +156,14 @@ class ShopDataManager(
         return shopData?.stock ?: -1
     }
 
+    fun countPlayerCreatedShops(uniqueID: UUID): Int {
+        return shopDBService.countPlayerCreatedShops(uniqueID)
+    }
+
+    fun getPlayerCreatedShops(uniqueID: UUID): List<Shop> {
+        return shopDBService.getPlayerCreatedShops(uniqueID)
+    }
+
     fun createNewShop(shop: Shop) {
         val id = shopDBService.insertShop(shop)
         loadedShopMap[id] = shop
@@ -168,24 +179,41 @@ class ShopDataManager(
 
     fun sendShopDetailsMessageForOwner(player: Player, shop: Shop) {
         player.sendMessage(
-            pluginInstance.language.shopInteractOwner.produceAsComponent(
-                "shopTitle" to when (shop.type) {
-                    ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
-                    ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
-                },
-                "id" to shop.id,
-                "item" to ItemUtils.itemTextWithHover(shop.itemStack),
-                "changeItemButton" to changeItemButton,
-                "price" to shop.price,
-                "changePriceButton" to changePriceButton,
-                "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
-                "stock" to shop.stock,
-                "addStockButton" to addStockButton,
-                "retrieveStockButton" to retrieveStockButton,
-                "tradeLimit" to shop.tradeLimit,
-                "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
-                "changeTradeLimitButton" to changeTradeLimitButton
-            )
+            when (shop.type) {
+                ShopType.BUY -> pluginInstance.language.shopInteractOwnerBuy.produceAsComponent(
+                    "shopTitle" to pluginInstance.language.buyShopTitle.produce(),
+                    "id" to shop.id,
+                    "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                    "changeItemButton" to changeItemButton,
+                    "price" to shop.price,
+                    "changePriceButton" to changePriceButton,
+                    "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
+                    "stock" to shop.stock,
+                    "capacity" to pluginInstance.config.shopInventoryCapacity,
+                    "addStockButton" to addStockButton,
+                    "retrieveStockButton" to retrieveStockButton,
+                    "tradeLimit" to shop.tradeLimit,
+                    "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
+                    "changeTradeLimitButton" to changeTradeLimitButton
+                )
+
+                ShopType.SELL -> pluginInstance.language.shopInteractOwnerSell.produceAsComponent(
+                    "shopTitle" to pluginInstance.language.sellShopTitle.produce(),
+                    "id" to shop.id,
+                    "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                    "changeItemButton" to changeItemButton,
+                    "price" to shop.price,
+                    "changePriceButton" to changePriceButton,
+                    "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
+                    "stock" to shop.stock,
+                    "capacity" to pluginInstance.config.shopInventoryCapacity,
+                    "addStockButton" to addStockButton,
+                    "retrieveStockButton" to retrieveStockButton,
+                    "tradeLimit" to shop.tradeLimit,
+                    "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
+                    "changeTradeLimitButton" to changeTradeLimitButton
+                )
+            }
         )
     }
 
@@ -196,11 +224,12 @@ class ShopDataManager(
                     ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
                     ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
                 },
-                "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
+                "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
                 "price" to shop.price,
                 "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
                 "stock" to shop.stock,
+                "capacity" to pluginInstance.config.shopInventoryCapacity,
                 "tradeButton" to when (shop.type) {
                     ShopType.SELL -> buyTradeButton
                     ShopType.BUY -> sellTradeButton
