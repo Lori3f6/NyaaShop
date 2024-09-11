@@ -20,6 +20,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
     Listener {
     private val shopDataManager = pluginInstance.getShopDataManager()
     private val adminPermissionNode = "nyaashop.admin"
+    private val playerPermissionNode = "nyaashop.use"
 
     override fun onTabComplete(
         sender: CommandSender,
@@ -30,6 +31,8 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         if (sender is ConsoleCommandSender)
             return mutableListOf("reload")
         if (sender !is Player)
+            return null
+        if(!sender.hasPermission(playerPermissionNode))
             return null
 
         val selectedShopID =
@@ -113,6 +116,11 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         label: String,
         args: Array<out String>?
     ): Boolean {
+        if(!sender.hasPermission(playerPermissionNode)){
+            sender.sendMessage(pluginInstance.language.permissionDenied.produce())
+            return true
+        }
+
         if (args.isNullOrEmpty()) {
             return sendHelpAndReturn(sender)
         }
@@ -176,7 +184,11 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     "price" -> {
                         val price = args[2].toDoubleOrNull()
                         if (price == null) {
-                            sender.sendMessage(pluginInstance.language.notValidNumber.produce())
+                            sender.sendMessage(
+                                pluginInstance.language.notValidNumber.produce(
+                                    "input" to args[2]
+                                )
+                            )
                             return true
                         }
                         shopDataManager.updatePrice(shop.id, price)
@@ -236,7 +248,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             return true
                         }
                         val item = shop.itemStack
-                        if (!senderPlayer.hasAtLeast(item)
+                        if (!senderPlayer.hasAtLeast(item, itemAmount)
                         ) {
                             sender.sendMessage(
                                 pluginInstance.language.requestFailedItemNotEnough.produceAsComponent(
@@ -246,9 +258,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             )
                             return true
                         }
-                        val itemToRemove =
-                            item.clone().apply { amount = itemAmount }
-                        senderPlayer.removeItem(itemToRemove)
+                        senderPlayer.removeItem(item, itemAmount)
                         shopDataManager.updateStock(
                             shop.id,
                             shop.stock + itemAmount
@@ -263,15 +273,16 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                         )
                     }
                     "retrieve" -> {
+                        val item = shop.itemStack
                         if (itemAmount > shop.stock) {
                             sender.sendMessage(
-                                pluginInstance.language.retrieveStockFailedStockNotEnough.produce(
-                                    "stock" to shop.stock
+                                pluginInstance.language.retrieveStockFailedStockNotEnough.produceAsComponent(
+                                    "stock" to shop.stock,
+                                    "item" to ItemUtils.itemTextWithHover(item)
                                 )
                             )
                             return true
                         }
-                        val item = shop.itemStack
                         senderPlayer.addItemByDrop(item, itemAmount)
 
                         shopDataManager.updateStock(
@@ -344,8 +355,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
 
                 if (!tradeResult.isSuccess) {
                     pluginInstance.logger.warning("Failed to trade between ${tradeResult.receipt.payer} and ${tradeResult.receipt.receiver}, reason: ${tradeResult.status()}")
-                    senderPlayer.removeItem(
-                        item.clone().apply { amount = itemAmount })
+                    senderPlayer.removeItem(item, itemAmount)
                     senderPlayer.sendMessage(
                         pluginInstance.language.transactionFailedUnknown.produce()
                     )
@@ -397,8 +407,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     return true
                 }
                 val item = shop.itemStack
-                val itemToRemove = item.clone().apply { amount = itemAmount }
-                if (!senderPlayer.hasAtLeast(itemToRemove)) {
+                if (!senderPlayer.hasAtLeast(item, itemAmount)) {
                     sender.sendMessage(
                         pluginInstance.language.requestFailedItemNotEnough.produceAsComponent(
                             "item" to ItemUtils.itemTextWithHover(item)
@@ -423,7 +432,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     return true
                 }
 
-                val itemRemoved = senderPlayer.removeItem(itemToRemove)
+                val itemRemoved = senderPlayer.removeItem(item, itemAmount)
 
                 val tradeResult = pluginInstance.economyProvider.playerTrade(
                     shop.ownerUniqueID,
@@ -448,7 +457,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     pluginInstance.language.sellSuccessNotice.produceAsComponent(
                         "item" to ItemUtils.itemTextWithHover(item),
                         "amount" to itemAmount,
-                        "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
+                        "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
                         "cost" to tradeResult.receipt.amountTotally,
                         "tax" to tradeResult.receipt.feeTotally,
                         "taxPercentage" to pluginInstance.config.shopTradeFeeRateBuyInDouble * 100,

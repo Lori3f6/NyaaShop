@@ -3,21 +3,16 @@ package cat.nyaa.nyaashop
 import cat.nyaa.nyaashop.data.Shop
 import cat.nyaa.nyaashop.data.ShopType
 import cat.nyaa.nyaashop.magic.DyeMap.Companion.dyeColor
+import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.getTextContent
 import cat.nyaa.nyaashop.magic.Utils.Companion.isPlayerHoldingSignDecorationItem
 import cat.nyaa.nyaashop.magic.Utils.Companion.isRelevantToShopSign
 import cat.nyaa.nyaashop.magic.Utils.Companion.isShopSign
-import com.destroystokyo.paper.MaterialTags
-import net.kyori.adventure.text.Component
-import net.kyori.adventure.text.TextComponent
 import org.bukkit.Material
-import org.bukkit.block.Block
-import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
 import org.bukkit.entity.ItemDisplay
-import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
@@ -34,9 +29,12 @@ import org.bukkit.persistence.PersistentDataType
 
 class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
     private val shopDataManager = pluginInstance.getShopDataManager()
+    private val shopCreationPermissionNode = "nyaashop.creation"
 
     @EventHandler(ignoreCancelled = true)
     fun forSignCreation(event: SignChangeEvent) {
+        if (!event.player.hasPermission(shopCreationPermissionNode))
+            return
         val firstLine = event.line(0) ?: return
         val sellShop =
             getTextContent(firstLine) in pluginInstance.config.shopCreationSellHeader
@@ -44,7 +42,9 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
             getTextContent(firstLine) in pluginInstance.config.shopCreationBuyHeader
 
         val secondLine = event.line(1) ?: return
+        val thirdLine = event.line(2)
         val price = getTextContent(secondLine).toDoubleOrNull() ?: return
+        val tradeLimit = thirdLine?.let { getTextContent(it) }?.toIntOrNull()
         val offhandItem = event.player.inventory.itemInOffHand
         if (!sellShop && !buyShop) return
         if (price < 0) return
@@ -74,11 +74,19 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                 Material.APPLE,1
             ),
             0,
-            0,
+            tradeLimit ?: 0,
             price
         )
         shopDataManager.createNewShop(shop)
-        event.player.sendMessage(pluginInstance.language.shopCreated.produce())
+        event.player.sendMessage(
+            pluginInstance.language.shopCreated.produce(
+                "shopTitle" to when (shop.type) {
+                    ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
+                    ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
+                },
+                "id" to shop.id
+            )
+        )
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -91,6 +99,10 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                 shopDataManager.getShopData(shopID)
                     ?.let { shop ->
                         if (shop.ownerUniqueID == event.player.uniqueId) {
+                            event.player.addItemByDrop(
+                                shop.itemStack,
+                                shop.stock
+                            )
                             shopDataManager
                                 .deleteShopData(shop)
                             event.player.sendMessage(

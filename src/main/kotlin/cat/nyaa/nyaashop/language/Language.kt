@@ -76,8 +76,6 @@ class Language {
         Text.of("This shop only has {item} x {amount} to retrieve")
     val stockRetrieved =
         Text.of("Retrieved {item} x {amount} from the shop, it's now {stock}/{capacity} loaded")
-    val requestCantFullyComply =
-        Text.of("Unable to fully comply your request because your bag is full")
     val changeTradeLimitButtonText = Text.of("&7[&6Change Trade Limit&7]")
     val changeTradeLimitButtonDescription =
         Text.of("Execute to change the shop trade limit (only for {sellShopTitle})")

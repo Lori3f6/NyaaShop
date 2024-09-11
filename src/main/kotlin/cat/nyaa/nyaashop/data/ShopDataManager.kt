@@ -1,8 +1,8 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
-import cat.nyaa.nyaashop.magic.Utils
 import cat.nyaa.nyaashop.data.db.ShopDBService
+import cat.nyaa.nyaashop.magic.Utils
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import org.bukkit.Bukkit
 import org.bukkit.block.Sign
@@ -180,53 +180,37 @@ class ShopDataManager(
     fun sendShopDetailsMessageForOwner(player: Player, shop: Shop) {
         player.sendMessage(
             when (shop.type) {
-                ShopType.BUY -> pluginInstance.language.shopInteractOwnerBuy.produceAsComponent(
-                    "shopTitle" to pluginInstance.language.buyShopTitle.produce(),
-                    "id" to shop.id,
-                    "item" to ItemUtils.itemTextWithHover(shop.itemStack),
-                    "changeItemButton" to changeItemButton,
-                    "price" to shop.price,
-                    "changePriceButton" to changePriceButton,
-                    "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
-                    "stock" to shop.stock,
-                    "capacity" to pluginInstance.config.shopInventoryCapacity,
-                    "addStockButton" to addStockButton,
-                    "retrieveStockButton" to retrieveStockButton,
-                    "tradeLimit" to shop.tradeLimit,
-                    "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
-                    "changeTradeLimitButton" to changeTradeLimitButton
-                )
-
-                ShopType.SELL -> pluginInstance.language.shopInteractOwnerSell.produceAsComponent(
-                    "shopTitle" to pluginInstance.language.sellShopTitle.produce(),
-                    "id" to shop.id,
-                    "item" to ItemUtils.itemTextWithHover(shop.itemStack),
-                    "changeItemButton" to changeItemButton,
-                    "price" to shop.price,
-                    "changePriceButton" to changePriceButton,
-                    "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
-                    "stock" to shop.stock,
-                    "capacity" to pluginInstance.config.shopInventoryCapacity,
-                    "addStockButton" to addStockButton,
-                    "retrieveStockButton" to retrieveStockButton,
-                    "tradeLimit" to shop.tradeLimit,
-                    "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
-                    "changeTradeLimitButton" to changeTradeLimitButton
-                )
-            }
+                ShopType.BUY -> pluginInstance.language.shopInteractOwnerBuy
+                ShopType.SELL -> pluginInstance.language.shopInteractOwnerSell
+            }.produceAsComponent(
+                "shopTitle" to shopTitle(shop.type),
+                "id" to shop.id,
+                "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                "changeItemButton" to changeItemButton,
+                "price" to shop.price,
+                "changePriceButton" to changePriceButton,
+                "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
+                "stock" to shop.stock,
+                "tax" to shop.price * shopFeeRate(shop.type),
+                "capacity" to pluginInstance.config.shopInventoryCapacity,
+                "addStockButton" to addStockButton,
+                "retrieveStockButton" to retrieveStockButton,
+                "tradeLimit" to shop.tradeLimit,
+                "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
+                "changeTradeLimitButton" to changeTradeLimitButton
+            )
         )
     }
 
     fun sendShopDetailsMessageForGuest(player: Player, shop: Shop) {
         player.sendMessage(
             pluginInstance.language.shopInteractGuest.produceAsComponent(
-                "shopTitle" to when (shop.type) {
-                    ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
-                    ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
-                },
+                "shopTitle" to shopTitle(shop.type),
                 "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
+                "id" to shop.id,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
                 "price" to shop.price,
+                "tax" to shop.price * shopFeeRate(shop.type),
                 "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
                 "stock" to shop.stock,
                 "capacity" to pluginInstance.config.shopInventoryCapacity,
@@ -236,6 +220,20 @@ class ShopDataManager(
                 }
             )
         )
+    }
+
+    private fun shopFeeRate(type: ShopType): Double {
+        return when (type) {
+            ShopType.BUY -> pluginInstance.config.shopTradeFeeRateBuyInDouble
+            ShopType.SELL -> pluginInstance.config.shopTradeFeeRateSellInDouble
+        }
+    }
+
+    private fun shopTitle(type: ShopType): String {
+        return when (type) {
+            ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
+            ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
+        }
     }
 
     fun loadShop(

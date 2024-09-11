@@ -84,7 +84,7 @@ class Utils {
 
         fun Player.addItemByDrop(itemStack: ItemStack, amount: Int) {
             var amountRemaining = amount
-            while (itemStack.maxStackSize > amountRemaining) {
+            while (itemStack.maxStackSize < amountRemaining) {
                 val itemStack = itemStack.asOne()
                 itemStack.amount = itemStack.maxStackSize
                 dropItemForPickup(itemStack)
@@ -103,15 +103,18 @@ class Utils {
             itemDropped.setCanPlayerPickup(true)
             itemDropped.owner = uniqueId
             itemDropped.pickupDelay = 0
+            itemDropped.customName(Component.text("hihi"))
             return itemDropped
         }
 
-        fun Player.hasAtLeast(itemStack: ItemStack): Boolean {
-            return inventory.containsAtLeast(itemStack, itemStack.amount)
+        fun Player.hasAtLeast(itemStack: ItemStack, amount: Int): Boolean {
+            return inventory.containsAtLeast(itemStack, amount)
         }
 
-        fun Player.removeItem(itemStack: ItemStack): Boolean {
-            return inventory.removeItem(itemStack).isEmpty()
+        fun Player.removeItem(itemStack: ItemStack, amount: Int): Boolean {
+            val itemStack = itemStack.asOne()
+            itemStack.amount = amount
+            return inventory.removeItem(itemStack).isNullOrEmpty()
         }
     }
 }
