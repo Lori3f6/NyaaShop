@@ -13,7 +13,7 @@ pipeline {
 
     post {
            always {
-               archiveArtifacts artifacts: 'build/libs/*-shaded.jar', fingerprint: true
+               archiveArtifacts artifacts: 'build/libs/*-all.jar', fingerprint: true
                cleanWs()
            }
     }
