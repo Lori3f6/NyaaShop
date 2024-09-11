@@ -21,15 +21,23 @@ dependencies {
     compileOnly("cat.nyaa:ukit:1.7.1")
 }
 
-tasks.shadowJar {
-    archiveClassifier.set("shaded")
-    dependencies {
-        include(dependency("land.melon.lab:simplelanguageloader:1.13.10"))
+tasks {
+    processResources {
+        filesMatching("**/plugin.yml") {
+            expand("version" to project.version)
+        }
     }
-}
 
-tasks.test {
-    useJUnitPlatform()
+    test {
+        useJUnitPlatform()
+    }
+
+    shadowJar {
+        archiveClassifier.set("all")
+        dependencies {
+            include(dependency("land.melon.lab:simplelanguageloader:1.13.10"))
+        }
+    }
 }
 
 kotlin {
