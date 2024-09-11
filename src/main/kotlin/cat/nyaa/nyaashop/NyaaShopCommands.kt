@@ -1,10 +1,10 @@
 package cat.nyaa.nyaashop
 
 import cat.nyaa.ecore.ServiceFeePreference
-import cat.nyaa.nyaashop.Utils.Companion.hasAtLeast
-import cat.nyaa.nyaashop.Utils.Companion.removeItem
-import cat.nyaa.nyaashop.Utils.Companion.tryToAddItem
 import cat.nyaa.nyaashop.data.ShopType
+import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
+import cat.nyaa.nyaashop.magic.Utils.Companion.hasAtLeast
+import cat.nyaa.nyaashop.magic.Utils.Companion.removeItem
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import org.bukkit.Bukkit
 import org.bukkit.command.Command
@@ -272,27 +272,21 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             return true
                         }
                         val item = shop.itemStack
-                        val itemToAdd =
-                            item.clone().apply { amount = itemAmount }
-                        val itemsAdded =
-                            senderPlayer.tryToAddItem(itemToAdd)
+                        senderPlayer.addItemByDrop(item, itemAmount)
+
                         shopDataManager.updateStock(
                             shop.id,
-                            shop.stock - itemsAdded
+                            shop.stock - itemAmount
                         )
                         sender.sendMessage(
                             pluginInstance.language.stockRetrieved.produceAsComponent(
                                 "item" to ItemUtils.itemTextWithHover(item),
-                                "amount" to itemsAdded,
+                                "amount" to itemAmount,
                                 "stock" to shop.stock,
                                 "capacity" to pluginInstance.config.shopInventoryCapacity
                             )
                         )
-                        if (itemToAdd.amount != itemsAdded) {
-                            sender.sendMessage(pluginInstance.language.requestCantFullyComply.produce())
-                        }
                     }
-
                     else -> return sendHelpAndReturn(sender)
                 }
             }
@@ -338,13 +332,12 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     return true
                 }
                 val item = shop.itemStack
-                val itemToAdd = item.clone().apply { setAmount(itemAmount) }
-                val itemAdded = senderPlayer.tryToAddItem(itemToAdd)
+                senderPlayer.addItemByDrop(item, itemAmount)
 
                 val tradeResult = pluginInstance.economyProvider.playerTrade(
                     senderPlayer.uniqueId,
                     shop.ownerUniqueID,
-                    shop.price * itemAdded,
+                    shop.price * itemAmount,
                     pluginInstance.config.shopTradeFeeRateSellInDouble,
                     ServiceFeePreference.ADDITIONAL
                 ) // this one should only success due to the balance has checked, otherwise it might be some exception happens
@@ -352,19 +345,19 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                 if (!tradeResult.isSuccess) {
                     pluginInstance.logger.warning("Failed to trade between ${tradeResult.receipt.payer} and ${tradeResult.receipt.receiver}, reason: ${tradeResult.status()}")
                     senderPlayer.removeItem(
-                        item.clone().apply { amount = itemAdded })
+                        item.clone().apply { amount = itemAmount })
                     senderPlayer.sendMessage(
                         pluginInstance.language.transactionFailedUnknown.produce()
                     )
                     return true
                 }
 
-                shopDataManager.updateStock(shop.id, shop.stock - itemAdded)
+                shopDataManager.updateStock(shop.id, shop.stock - itemAmount)
 
                 sender.sendMessage(
                     pluginInstance.language.buySuccessNotice.produceAsComponent(
                         "item" to ItemUtils.itemTextWithHover(item),
-                        "amount" to itemAdded,
+                        "amount" to itemAmount,
                         "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
                         "cost" to tradeResult.receipt.amountTotally,
                         "tax" to tradeResult.receipt.feeTotally,
@@ -372,9 +365,6 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                         "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
                     )
                 )
-                if (itemToAdd.amount != itemAdded) {
-                    sender.sendMessage(pluginInstance.language.requestCantFullyComply.produce())
-                }
             }
 
             "sell" -> {

@@ -1,6 +1,7 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
+import cat.nyaa.nyaashop.magic.Utils.Companion.blockFaceIntoYaw
 import cat.nyaa.ukit.api.UKitAPI
 import land.melon.lab.simplelanguageloader.utils.LocaleUtils
 import org.bukkit.Bukkit
@@ -173,16 +174,6 @@ data class Shop(
 
     private fun isSellingBlock(): Boolean {
         return itemStack.type.isBlock
-    }
-
-    private fun blockFaceIntoYaw(face: BlockFace): Float {
-        return when (face) {
-            BlockFace.NORTH -> 0F
-            BlockFace.EAST -> 90F
-            BlockFace.SOUTH -> 180F
-            BlockFace.WEST -> 270F
-            else -> 0F
-        }
     }
 
     fun writeShopIDPDC() {

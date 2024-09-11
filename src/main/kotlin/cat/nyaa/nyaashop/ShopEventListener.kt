@@ -3,6 +3,10 @@ package cat.nyaa.nyaashop
 import cat.nyaa.nyaashop.data.Shop
 import cat.nyaa.nyaashop.data.ShopType
 import cat.nyaa.nyaashop.magic.DyeMap.Companion.dyeColor
+import cat.nyaa.nyaashop.magic.Utils.Companion.getTextContent
+import cat.nyaa.nyaashop.magic.Utils.Companion.isPlayerHoldingSignDecorationItem
+import cat.nyaa.nyaashop.magic.Utils.Companion.isRelevantToShopSign
+import cat.nyaa.nyaashop.magic.Utils.Companion.isShopSign
 import com.destroystokyo.paper.MaterialTags
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextComponent
@@ -10,6 +14,7 @@ import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
+import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
 import org.bukkit.entity.ItemDisplay
 import org.bukkit.entity.Player
@@ -43,6 +48,10 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
         val offhandItem = event.player.inventory.itemInOffHand
         if (!sellShop && !buyShop) return
         if (price < 0) return
+
+        val data = event.block.blockData as WallSign
+        if (isRelevantToShopSign(event.block.getRelative(data.facing.oppositeFace))) return
+
         if (shopDataManager.countPlayerCreatedShops(event.player.uniqueId) >= pluginInstance.config.maximumShopsPerPlayer) {
             event.player.sendMessage(
                 pluginInstance.language.tooManyShops.produce(
@@ -70,10 +79,6 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
         )
         shopDataManager.createNewShop(shop)
         event.player.sendMessage(pluginInstance.language.shopCreated.produce())
-    }
-
-    private fun isShopSign(block: Block): Boolean {
-        return block.state is Sign && Shop.isShopSign(block.state as Sign)
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -104,11 +109,6 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                     } ?: return
             }
         }
-    }
-
-    private fun isPlayerHoldingSignDecorationItem(player: Player): Boolean {
-        val item = player.inventory.itemInMainHand
-        return MaterialTags.DYES.isTagged(item.type) || item.type == Material.INK_SAC || item.type == Material.GLOW_INK_SAC
     }
 
     @EventHandler
@@ -179,18 +179,6 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
         }
     }
 
-    private fun isRelevantToShopSign(block: Block): Boolean {
-        val blockToSearch = mutableListOf(
-            block.getRelative(BlockFace.NORTH),
-            block.getRelative(BlockFace.SOUTH),
-            block.getRelative(BlockFace.EAST),
-            block.getRelative(BlockFace.WEST)
-        )
-        return blockToSearch.any {
-            it.state is Sign && Shop.isShopSign(it.state as Sign)
-        }
-    }
-
     @EventHandler(ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
         event.isCancelled = isRelevantToShopSign(event.block)
@@ -248,13 +236,5 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                 shopDataManager.unloadShop(shopID)
             }
         }
-    }
-
-
-    private fun getTextContent(component: Component): String {
-        if (component is TextComponent) {
-            return component.content()
-        } else
-            throw IllegalArgumentException("Component is not a TextComponent")
     }
 }

@@ -1,7 +1,7 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
-import cat.nyaa.nyaashop.Utils
+import cat.nyaa.nyaashop.magic.Utils
 import cat.nyaa.nyaashop.data.db.ShopDBService
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import org.bukkit.Bukkit
@@ -11,7 +11,7 @@ import org.bukkit.inventory.ItemStack
 import java.io.File
 import java.util.*
 
-// auto async preload + save changes instantly
+// auto preload + save changes instantly
 class ShopDataManager(
     private val sqliteFile: File,
     private val pluginInstance: NyaaShop
