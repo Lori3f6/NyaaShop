@@ -1,11 +1,15 @@
 package cat.nyaa.nyaashop
 
 import cat.nyaa.ecore.ServiceFeePreference
+import cat.nyaa.nyaashop.data.Shop
 import cat.nyaa.nyaashop.data.ShopType
 import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.hasAtLeast
 import cat.nyaa.nyaashop.magic.Utils.Companion.removeItem
+import cat.nyaa.ukit.api.UKitAPI
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.ComponentLike
 import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
@@ -368,13 +372,32 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     pluginInstance.language.buySuccessNotice.produceAsComponent(
                         "item" to ItemUtils.itemTextWithHover(item),
                         "amount" to itemAmount,
-                        "owner" to Bukkit.getPlayer(shop.ownerUniqueID)?.name,
+                        "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
                         "cost" to tradeResult.receipt.amountTotally,
                         "tax" to tradeResult.receipt.feeTotally,
                         "taxPercentage" to pluginInstance.config.shopTradeFeeRateSellInDouble * 100,
                         "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
                     )
                 )
+
+                val ownerMessage =
+                    pluginInstance.language.sellShopTradeNoticeForOwner.produceAsComponent(
+                        "shopTitle" to shop.shopTitle(),
+                        "shopId" to shop.id,
+                        "playerName" to sender.name,
+                        "item" to ItemUtils.itemTextWithHover(item),
+                        "amount" to itemAmount,
+                        "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
+                        "income" to tradeResult.receipt.amountArriveTotally,
+                        "tax" to tradeResult.receipt.feeTotally,
+                        "taxPercentage" to pluginInstance.config.shopTradeFeeRateSellInDouble * 100,
+                        "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
+                    )
+                sendMessageOrOfflineMessageIfUkitExist(
+                    shop.ownerUniqueID,
+                    ownerMessage
+                )
+
             }
 
             "sell" -> {
@@ -464,9 +487,54 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                         "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
                     )
                 )
+
+                val ownerMessage =
+                    pluginInstance.language.buyShopTradeNoticeForOwner.produceAsComponent(
+                        "shopTitle" to shop.shopTitle(),
+                        "shopId" to shop.id,
+                        "playerName" to sender.name,
+                        "item" to ItemUtils.itemTextWithHover(item),
+                        "amount" to itemAmount,
+                        "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
+                        "cost" to tradeResult.receipt.amountTotally,
+                        "tax" to tradeResult.receipt.feeTotally,
+                        "taxPercentage" to pluginInstance.config.shopTradeFeeRateSellInDouble * 100,
+                        "currencyName" to pluginInstance.economyProvider.currencyNamePlural()
+                    )
+
+                sendMessageOrOfflineMessageIfUkitExist(
+                    shop.ownerUniqueID,
+                    ownerMessage
+                )
+            }
+
+            "list" -> {
             }
         }
         return true
+    }
+
+    private fun shopDetailComponent(shop: Shop): ComponentLike {
+        val component = Component.text()
+
+        return component
+    }
+
+    private fun sendMessageOrOfflineMessageIfUkitExist(
+        receiverUniqueID: UUID,
+        message: Component
+    ) {
+        if (pluginInstance.isUkitSetup) {
+            UKitAPI.getAPIInstance().pushMessage(
+                receiverUniqueID,
+                message,
+                pluginInstance.language.offlineMessageSenderName.produceAsComponent()
+            )
+        } else {
+            Bukkit.getPlayer(receiverUniqueID)?.sendMessage(
+                message
+            )
+        }
     }
 
     private fun checkBalance(accountUniqueID: UUID, amount: Double): Boolean {

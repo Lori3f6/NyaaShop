@@ -35,10 +35,10 @@ class Utils {
                 block.getRelative(BlockFace.WEST)
             )
             return blockToSearch.any {
-                if (!isShopSign(it)) return false
-                val sign = it as Sign
+                if (!isShopSign(it)) return@any false
+                val sign = it.state as Sign
                 val wallSign = sign.blockData as WallSign
-                it.getRelative(wallSign.facing.oppositeFace).location == block.location
+                return@any it.getRelative(wallSign.facing.oppositeFace).location == block.location
             }
         }
 

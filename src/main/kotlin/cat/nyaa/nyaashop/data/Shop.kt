@@ -5,9 +5,7 @@ import cat.nyaa.nyaashop.magic.Utils.Companion.blockFaceIntoYaw
 import cat.nyaa.ukit.api.UKitAPI
 import land.melon.lab.simplelanguageloader.utils.LocaleUtils
 import org.bukkit.Bukkit
-import org.bukkit.DyeColor
 import org.bukkit.Location
-import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -79,7 +77,7 @@ data class Shop(
     )
 
     private val itemDisplayMatrix = Matrix4f(
-        0.5f, 0f, 0f, 0f, 0f, 0.5f, 0f, 0f, 0f, 0f, 0.5f, 0f, 0f, 0f, 0f, 1f
+        0.62f, 0f, 0f, 0f, 0f, 0.62f, 0f, 0f, 0f, 0f, 0.62f, 0f, 0f, 0f, 0f, 1f
     )
 
     private fun getSignBlock(): Block {
@@ -113,7 +111,7 @@ data class Shop(
 
     fun getRemainingStock(): Int {
         return when (type) {
-            ShopType.BUY -> tradeLimit - stock
+            ShopType.BUY -> (tradeLimit - stock).coerceAtLeast(0)
             ShopType.SELL -> stock
         }
     }
@@ -129,6 +127,13 @@ data class Shop(
                 location.z
             )
         )
+    }
+
+    fun shopTitle(): String {
+        return when (type) {
+            ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.produce()
+            ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.produce()
+        }
     }
 
     private fun distanceFrom(location: Triple<Double, Double, Double>): Double {
@@ -176,7 +181,7 @@ data class Shop(
         return itemStack.type.isBlock
     }
 
-    fun writeShopIDPDC() {
+    fun initializeShopSign() {
         val block = getSignBlock()
         if (block.state !is Sign) {
             throw IllegalStateException("Shop block is not a sign!")
@@ -187,12 +192,29 @@ data class Shop(
             PersistentDataType.INTEGER,
             id
         )
-        sign.persistentDataContainer.set(
-            UKitAPI.signEditLockTagKey,
-            PersistentDataType.BOOLEAN,
-            true
-        )
-        sign.update()
+        // TODO fail safe
+        if (NyaaShop.instance.isUkitSetup) {
+            sign.persistentDataContainer.set(
+                UKitAPI.signEditLockTagKey,
+                PersistentDataType.BOOLEAN,
+                true
+            )
+        }
+        updateSignStyleNextTick(sign)
+    }
+
+    fun updateSignStyleNextTick(sign: Sign) {
+        Bukkit.getServer().scheduler.runTaskLater(NyaaShop.instance, { task ->
+            val signSide = sign.getSide(Side.FRONT)
+            signSide.isGlowingText =
+                NyaaShop.instance.config.enableShopSignGlowing
+            signSide.color =
+                when (type) {
+                    ShopType.BUY -> NyaaShop.instance.config.buyShopSignColor
+                    ShopType.SELL -> NyaaShop.instance.config.sellShopSignColor
+                }
+            sign.update()
+        }, 1)
     }
 
     fun updateSign() {

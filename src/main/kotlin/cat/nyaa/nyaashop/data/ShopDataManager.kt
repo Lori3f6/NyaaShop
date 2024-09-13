@@ -168,7 +168,7 @@ class ShopDataManager(
         val id = shopDBService.insertShop(shop)
         loadedShopMap[id] = shop
         shop.id = id
-        shop.writeShopIDPDC()
+        shop.initializeShopSign()
         shop.refreshItemDisplay()
         pluginInstance.server.scheduler.runTaskLater(
             pluginInstance,
@@ -183,7 +183,7 @@ class ShopDataManager(
                 ShopType.BUY -> pluginInstance.language.shopInteractOwnerBuy
                 ShopType.SELL -> pluginInstance.language.shopInteractOwnerSell
             }.produceAsComponent(
-                "shopTitle" to shopTitle(shop.type),
+                "shopTitle" to shop.shopTitle(),
                 "id" to shop.id,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
                 "changeItemButton" to changeItemButton,
@@ -205,7 +205,7 @@ class ShopDataManager(
     fun sendShopDetailsMessageForGuest(player: Player, shop: Shop) {
         player.sendMessage(
             pluginInstance.language.shopInteractGuest.produceAsComponent(
-                "shopTitle" to shopTitle(shop.type),
+                "shopTitle" to shop.shopTitle(),
                 "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
                 "id" to shop.id,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
@@ -226,13 +226,6 @@ class ShopDataManager(
         return when (type) {
             ShopType.BUY -> pluginInstance.config.shopTradeFeeRateBuyInDouble
             ShopType.SELL -> pluginInstance.config.shopTradeFeeRateSellInDouble
-        }
-    }
-
-    private fun shopTitle(type: ShopType): String {
-        return when (type) {
-            ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
-            ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
         }
     }
 

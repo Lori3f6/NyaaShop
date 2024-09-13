@@ -107,4 +107,15 @@ class Language {
     val merchantStorageFull = Text.of("The merchant's storage is full or the stock reach the reade limit")
     val transactionFailedUnknown = Text.of("Transaction failed due to unknown reason")
     val tooManyShops = Text.of("You have {limit} shops already and can't create more, use &b/ns list&7 to see and manage your shops")
+    val buyShopTradeNoticeForOwner = Text.of(
+        "{player} sold {item} x {amount} to your {shopTitle}#{shopId}",
+        "Paid {cost}{currencyName}, included tax {tax}{currencyName}({taxPercentage}%)"
+    )
+    val sellShopTradeNoticeForOwner = Text.of(
+        "{player} ordered {item} x {amount} from your {shopTitle}#{shopId}",
+        "Got {income}{currencyName}, customer has paid tax {tax}{currencyName}({taxPercentage}%)"
+    )
+    val offlineMessageSenderName = Text.of("&7NyaaShop")
+    val selfShopDetailsIntro = Text.of("These are your shops:")
+    val shopDetail = Text.of("&3{index}&8# &8... {shopTitle}#{shopID}, ")
 }

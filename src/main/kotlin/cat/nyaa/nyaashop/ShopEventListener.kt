@@ -8,7 +8,9 @@ import cat.nyaa.nyaashop.magic.Utils.Companion.getTextContent
 import cat.nyaa.nyaashop.magic.Utils.Companion.isPlayerHoldingSignDecorationItem
 import cat.nyaa.nyaashop.magic.Utils.Companion.isRelevantToShopSign
 import cat.nyaa.nyaashop.magic.Utils.Companion.isShopSign
+import com.destroystokyo.paper.MaterialTags
 import org.bukkit.Material
+import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
@@ -22,6 +24,7 @@ import org.bukkit.event.block.SignChangeEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.event.world.ChunkLoadEvent
 import org.bukkit.event.world.ChunkUnloadEvent
 import org.bukkit.inventory.ItemStack
@@ -49,8 +52,24 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
         if (!sellShop && !buyShop) return
         if (price < 0) return
 
+        if (event.block.blockData !is WallSign) return
         val data = event.block.blockData as WallSign
         if (isRelevantToShopSign(event.block.getRelative(data.facing.oppositeFace))) return
+
+        val blockState = event.block.state as Sign
+
+        if (pluginInstance.config.preventWallSignShopCreateOnSign) {
+            val blockAgainst = event.block.getRelative(data.facing.oppositeFace)
+            if (MaterialTags.SIGNS.isTagged(blockAgainst.type)) return
+        }
+
+        if (pluginInstance.config.forceWallSignShopCreateWithGlass) {
+            val blockAgainstThenUp =
+                event.block.getRelative(data.facing.oppositeFace).getRelative(
+                    BlockFace.UP
+                )
+            if (!MaterialTags.GLASS.isTagged(blockAgainstThenUp.type)) return
+        }
 
         if (shopDataManager.countPlayerCreatedShops(event.player.uniqueId) >= pluginInstance.config.maximumShopsPerPlayer) {
             event.player.sendMessage(
@@ -71,7 +90,7 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
             event.block.z,
             if (sellShop) ShopType.SELL else ShopType.BUY,
             if (!offhandItem.type.isAir) offhandItem.clone().asOne() else ItemStack(
-                Material.APPLE,1
+                Material.MELON_SLICE,1
             ),
             0,
             tradeLimit ?: 0,
@@ -87,6 +106,11 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                 "id" to shop.id
             )
         )
+    }
+
+    @EventHandler
+    fun onPlayerLeaving(event: PlayerQuitEvent) {
+        shopDataManager.clearPlayerSelectedShop(event.player.uniqueId)
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -116,7 +140,9 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                             )
                         } else {
                             event.isCancelled = true
-                            event.player.sendMessage(pluginInstance.language.unableToBreak.produce())
+                            if (pluginInstance.config.sendMessageOnStoppingPlayerBreaking) {
+                                event.player.sendMessage(pluginInstance.language.unableToBreak.produce())
+                            }
                         }
                     } ?: return
             }
@@ -125,7 +151,7 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
 
     @EventHandler
     fun forShopRightClick(event: PlayerInteractEvent) {
-        if (event.action != Action.RIGHT_CLICK_BLOCK) return
+        if (event.action != Action.RIGHT_CLICK_BLOCK && event.action == Action.LEFT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
         if (block.state is Sign) {
             val sign = block.state as Sign
@@ -183,17 +209,23 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
         val shop = shopDataManager.getShopData(shopID)
         if (shop == null || shop.distanceFrom(event.to) > pluginInstance.config.shopInteractiveRange) {
             shopDataManager.clearPlayerSelectedShop(player.uniqueId)
-            player.sendMessage(
-                pluginInstance.language.playerLeaveShop.produce(
-                    "shopID" to shopID
+            if (pluginInstance.config.sendMessageOnPlayerLeavingStore) {
+                player.sendMessage(
+                    pluginInstance.language.playerLeaveShop.produce(
+                        "shopID" to shopID
+                    )
                 )
-            )
+            }
         }
     }
 
     @EventHandler(ignoreCancelled = true)
     fun onBlockBreak(event: BlockBreakEvent) {
-        event.isCancelled = isRelevantToShopSign(event.block)
+        if (isRelevantToShopSign(event.block)) {
+            event.isCancelled = true
+            if (pluginInstance.config.sendMessageOnStoppingPlayerBreaking)
+                event.player.sendMessage(pluginInstance.language.unableToBreak.produce())
+        }
     }
 
     @EventHandler(ignoreCancelled = true)

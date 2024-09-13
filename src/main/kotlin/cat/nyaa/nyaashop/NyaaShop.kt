@@ -23,6 +23,9 @@ class NyaaShop : JavaPlugin() {
         private set
     lateinit var language: Language
         private set
+    var isUkitSetup: Boolean = false
+        private set
+    
 
     override fun onEnable() {
         dataFolder.mkdirs()
@@ -43,6 +46,8 @@ class NyaaShop : JavaPlugin() {
             Language::class.java,
             ::Language
         )
+        
+        isUkitSetup = Bukkit.getPluginManager().getPlugin("Ukit") != null
 
         if (!setupEconomy())
             throw IllegalStateException("ECore not found")
