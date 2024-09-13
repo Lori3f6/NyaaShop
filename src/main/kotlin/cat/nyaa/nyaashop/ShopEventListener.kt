@@ -47,7 +47,9 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
         val secondLine = event.line(1) ?: return
         val thirdLine = event.line(2)
         val price = getTextContent(secondLine).toDoubleOrNull() ?: return
-        val tradeLimit = thirdLine?.let { getTextContent(it) }?.toIntOrNull()
+        val tradeLimit =
+            thirdLine?.let { getTextContent(it) }?.toIntOrNull()
+                ?: 0
         val offhandItem = event.player.inventory.itemInOffHand
         if (!sellShop && !buyShop) return
         if (price < 0) return
@@ -93,7 +95,7 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
                 Material.MELON_SLICE,1
             ),
             0,
-            tradeLimit ?: 0,
+            tradeLimit.coerceAtLeast(0),
             price
         )
         shopDataManager.createNewShop(shop)
