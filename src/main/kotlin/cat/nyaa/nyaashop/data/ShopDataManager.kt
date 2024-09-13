@@ -239,13 +239,13 @@ class ShopDataManager(
             shop.refreshItemDisplay()
             shop.updateSign()
         }
-        pluginInstance.logger.info("Loaded shop #$shopID")
+        pluginInstance.logger.fine("Loaded shop #$shopID")
         return shop
     }
 
     fun unloadShop(shopID: Int) {
         loadedShopMap.remove(shopID)
-        pluginInstance.logger.info("Unloaded shop #$shopID")
+        pluginInstance.logger.fine("Unloaded shop #$shopID")
     }
 
     private fun cleanUpSign(sign:Sign){
