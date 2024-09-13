@@ -208,10 +208,10 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             sender.sendMessage(pluginInstance.language.notValidNumber.produce())
                             return true
                         }
-                        if (tradeLimit > pluginInstance.config.shopInventoryCapacity) {
+                        if (tradeLimit > shop.stockCapacity()) {
                             sender.sendMessage(
                                 pluginInstance.language.tradeLimitTooHigh.produce(
-                                    "inventoryCapacity" to pluginInstance.config.shopInventoryCapacity
+                                    "inventoryCapacity" to shop.stockCapacity()
                                 )
                             )
                             return true
@@ -241,8 +241,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                 }
                 when (args[1]) {
                     "add" -> {
-                        val availableStockSpace =
-                            pluginInstance.config.shopInventoryCapacity - shop.stock
+                        val availableStockSpace = shop.remainingStockCapacity()
                         if (itemAmount > availableStockSpace) {
                             sender.sendMessage(
                                 pluginInstance.language.addStockFailedCapacityExceed.produce(
@@ -272,7 +271,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                                 "item" to ItemUtils.itemTextWithHover(item),
                                 "amount" to itemAmount,
                                 "stock" to shop.stock,
-                                "capacity" to pluginInstance.config.shopInventoryCapacity
+                                "capacity" to shop.stockCapacity()
                             )
                         )
                     }
@@ -298,7 +297,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                                 "item" to ItemUtils.itemTextWithHover(item),
                                 "amount" to itemAmount,
                                 "stock" to shop.stock,
-                                "capacity" to pluginInstance.config.shopInventoryCapacity
+                                "capacity" to shop.stockCapacity()
                             )
                         )
                     }
@@ -425,10 +424,6 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     sender.sendMessage(pluginInstance.language.notValidNumber.produce())
                     return true
                 }
-                if (itemAmount > shop.getRemainingStock()) {
-                    sender.sendMessage(pluginInstance.language.merchantStorageFull.produce())
-                    return true
-                }
                 val item = shop.itemStack
                 if (!senderPlayer.hasAtLeast(item, itemAmount)) {
                     sender.sendMessage(
@@ -438,7 +433,11 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     )
                     return true
                 }
-                if ((itemAmount + shop.stock) > pluginInstance.config.shopInventoryCapacity) {
+                if (itemAmount > shop.remainingTradeStock()) {
+                    sender.sendMessage(pluginInstance.language.merchantStorageFull.produce())
+                    return true
+                }
+                if ((itemAmount + shop.stock) > shop.stockCapacity()) {
                     sender.sendMessage(
                         pluginInstance.language.merchantStorageFull.produce()
                     )

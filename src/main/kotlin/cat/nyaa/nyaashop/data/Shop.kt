@@ -109,10 +109,22 @@ data class Shop(
         return createItemDisplay()
     }
 
-    fun getRemainingStock(): Int {
+    fun remainingTradeStock(): Int {
         return when (type) {
-            ShopType.BUY -> (tradeLimit - stock).coerceAtLeast(0)
-            ShopType.SELL -> stock
+            ShopType.BUY -> (tradeLimit - stockCapacity()).coerceAtLeast(0)
+            ShopType.SELL -> stockCapacity()
+        }
+    }
+
+    fun remainingStockCapacity(): Int {
+        return stockCapacity() - stock
+    }
+
+    fun stockCapacity(): Int {
+        return NyaaShop.instance.config.let { config ->
+            if (config.makeShopInventoryCapacityPresentInSlotsSoItCalculatedByMaximumStackSizeOfItem)
+                itemStack.maxStackSize * config.shopInventoryCapacity1
+            else config.shopInventoryCapacity1
         }
     }
 
@@ -192,7 +204,6 @@ data class Shop(
             PersistentDataType.INTEGER,
             id
         )
-        // TODO fail safe
         if (NyaaShop.instance.isUkitSetup) {
             sign.persistentDataContainer.set(
                 UKitAPI.signEditLockTagKey,
@@ -237,7 +248,7 @@ data class Shop(
                     "price" to price,
                     "currencyName" to
                             NyaaShop.instance.economyProvider.currencyNamePlural(),
-                    "remaining" to getRemainingStock()
+                    "remaining" to remainingTradeStock()
                 )
             )
         }

@@ -192,7 +192,7 @@ class ShopDataManager(
                 "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
                 "stock" to shop.stock,
                 "tax" to shop.price * shopFeeRate(shop.type),
-                "capacity" to pluginInstance.config.shopInventoryCapacity,
+                "capacity" to shop.stockCapacity(),
                 "addStockButton" to addStockButton,
                 "retrieveStockButton" to retrieveStockButton,
                 "tradeLimit" to shop.tradeLimit,
@@ -213,7 +213,7 @@ class ShopDataManager(
                 "tax" to shop.price * shopFeeRate(shop.type),
                 "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
                 "stock" to shop.stock,
-                "capacity" to pluginInstance.config.shopInventoryCapacity,
+                "capacity" to shop.stockCapacity(),
                 "tradeButton" to when (shop.type) {
                     ShopType.SELL -> buyTradeButton
                     ShopType.BUY -> sellTradeButton
