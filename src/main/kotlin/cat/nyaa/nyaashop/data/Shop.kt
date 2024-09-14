@@ -2,11 +2,13 @@ package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
 import cat.nyaa.nyaashop.magic.Utils.Companion.blockFaceIntoYaw
+import cat.nyaa.nyaashop.magic.Utils.Companion.isLocationLoaded
 import cat.nyaa.ukit.api.UKitAPI
 import land.melon.lab.simplelanguageloader.utils.LocaleUtils
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
+import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
@@ -54,6 +56,20 @@ data class Shop(
             sign.persistentDataContainer.remove(shopIDPDCKey)
             sign.persistentDataContainer.remove(UKitAPI.signEditLockTagKey)
             sign.update()
+        }
+
+        fun checkStatus(shop: Shop): ShopStatus {
+            val world = shop.world()
+            if (world == null) return ShopStatus.INACCESSIBLE
+            if (!world.isLocationLoaded(
+                    shop.worldX,
+                    shop.worldZ
+                )
+            ) return ShopStatus.STANDBY
+            return when (shop.isShopValid()) {
+                true -> ShopStatus.ACTIVE
+                false -> ShopStatus.INACCESSIBLE
+            }
         }
     }
 
@@ -111,13 +127,24 @@ data class Shop(
 
     fun remainingTradeStock(): Int {
         return when (type) {
-            ShopType.BUY -> (tradeLimit - stockCapacity()).coerceAtLeast(0)
-            ShopType.SELL -> stockCapacity()
+            ShopType.BUY -> (tradeLimit - stock).coerceAtLeast(0)
+            ShopType.SELL -> stock
         }
     }
 
-    fun remainingStockCapacity(): Int {
+    fun stockCapacityRemaining(): Int {
         return stockCapacity() - stock
+    }
+
+    fun world(): World? {
+        return Bukkit.getWorld(worldUniqueID)
+    }
+
+    fun isShopValid(): Boolean { // will cause chunk load
+        val world = world() ?: return false
+        val state = world.getBlockAt(worldX, worldY, worldZ).state
+        if (state !is Sign) return false
+        return getShopIDFromSign(state) == id
     }
 
     fun stockCapacity(): Int {

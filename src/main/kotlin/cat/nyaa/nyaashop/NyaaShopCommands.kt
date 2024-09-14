@@ -11,6 +11,7 @@ import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.ComponentLike
 import org.bukkit.Bukkit
+import org.bukkit.OfflinePlayer
 import org.bukkit.command.Command
 import org.bukkit.command.CommandSender
 import org.bukkit.command.ConsoleCommandSender
@@ -145,6 +146,31 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         }
 
         val senderPlayer = sender
+
+        if (args[0].equals("list", true)) {
+            if (!senderPlayer.hasPermission(adminPermissionNode)) {
+                runListCommand(senderPlayer, true, senderPlayer)
+                return true
+            }
+            if (args.size > 1) {
+                val nameToLookup = args[1]
+                val playerToLookup =
+                    Bukkit.getOfflinePlayerIfCached(nameToLookup)
+                if (playerToLookup == null) {
+                    senderPlayer.sendMessage(
+                        pluginInstance.language.playerNotExist.produce(
+                            "name" to args[1]
+                        )
+                    )
+                    return true
+                }
+                runListCommand(senderPlayer, false, playerToLookup)
+            } else {
+                runListCommand(senderPlayer, true, senderPlayer)
+            }
+            return true
+        }
+
         val selectedShopID =
             shopDataManager.getPlayerSelectedShopID(senderPlayer.uniqueId)
         val shop = selectedShopID?.let { shopDataManager.getShopData(it) }
@@ -241,7 +267,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                 }
                 when (args[1]) {
                     "add" -> {
-                        val availableStockSpace = shop.remainingStockCapacity()
+                        val availableStockSpace = shop.stockCapacityRemaining()
                         if (itemAmount > availableStockSpace) {
                             sender.sendMessage(
                                 pluginInstance.language.addStockFailedCapacityExceed.produce(
@@ -506,11 +532,43 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     ownerMessage
                 )
             }
-
-            "list" -> {
-            }
         }
         return true
+    }
+
+    private fun runListCommand(
+        commandSender: CommandSender,
+        isLookupSelf: Boolean,
+        playerToLookup: OfflinePlayer
+    ) {
+        val shops =
+            shopDataManager.getPlayerCreatedShops(playerToLookup.uniqueId)
+        if (shops.isEmpty())
+            commandSender.sendMessage(pluginInstance.language.let { if (isLookupSelf) it.selfNoShopYet else it.othersNoShopYet }
+                .produce("player" to playerToLookup.name))
+        else {
+            commandSender.sendMessage(pluginInstance.language.let { if (isLookupSelf) it.selfShopDetailsIntro else it.othersShopDetailsIntro }
+                .produce("player" to playerToLookup.name))
+            shops.forEachIndexed { index, shop ->
+                commandSender.sendMessage(
+                    pluginInstance.language.shopDetail.produceAsComponent(
+                        "index" to index,
+                        "shopTitle" to shop.shopTitle(),
+                        "shopId" to shop.id,
+                        "worldX" to shop.worldX,
+                        "worldY" to shop.worldY,
+                        "worldZ" to shop.worldZ,
+                        "worldName" to (Bukkit.getWorld(shop.worldUniqueID)?.name
+                            ?: pluginInstance.language.worldNamePlaceHolderIfInvalid.produce()),
+                        "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                        "stock" to shop.stock,
+                        "shopCapacity" to shop.stockCapacity(),
+                        "tradeRemaining" to shop.remainingTradeStock(),
+                        "status" to Shop.checkStatus(shop).getStatusMessage()
+                    )
+                )
+            }
+        }
     }
 
     private fun shopDetailComponent(shop: Shop): ComponentLike {

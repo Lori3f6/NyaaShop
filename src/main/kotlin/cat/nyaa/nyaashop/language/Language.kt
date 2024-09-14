@@ -116,6 +116,17 @@ class Language {
         "Got {income}{currencyName}, customer has paid tax {tax}{currencyName}({taxPercentage}%)"
     )
     val offlineMessageSenderName = Text.of("&7NyaaShop")
+    val selfNoShopYet = Text.of("&8You have no shops yet")
+    val othersNoShopYet = Text.of("&8{player} have no shops yet")
     val selfShopDetailsIntro = Text.of("These are your shops:")
-    val shopDetail = Text.of("&3{index}&8# &8... {shopTitle}#{shopID}, ")
+    val othersShopDetailsIntro = Text.of("These are {player}'s shops:")
+    val playerNotExist = Text.of("{name} has no record on this server, check name spelling?")
+    val worldNamePlaceHolderIfInvalid = Text.of("Invalid World")
+    val shopDetail = Text.of(
+        "&3{index}&8# &8... {shopTitle}#{shopId}(x{worldX}, y{worldY}, z{worldZ}, {worldName})",
+        "Contains {item} x {stock}/{shopCapacity}, trade remaining {tradeRemaining}, {status}"
+    )
+    val shopStatusForDetailActive = Text.of("Active")
+    val shopStatusForDetailStandBy = Text.of("StandingBy")
+    val shopStatusForDetailInaccessible = Text.of("Inaccessible")
 }

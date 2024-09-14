@@ -7,6 +7,7 @@ import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.event.ClickEvent
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Material
+import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.BlockState
@@ -30,6 +31,10 @@ class Utils {
 
         fun isShopSign(blockState: BlockState): Boolean {
             return blockState is Sign && Shop.isShopSign(blockState)
+        }
+
+        fun World.isLocationLoaded(x: Int, z: Int): Boolean {
+            return isChunkLoaded(x / 16, z / 16)
         }
 
         fun isRelevantToShopSign(block: Block): Boolean {
