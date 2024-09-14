@@ -9,6 +9,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
+import org.bukkit.block.BlockState
 import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 import org.bukkit.entity.Item
@@ -24,7 +25,11 @@ class Utils {
         }
 
         fun isShopSign(block: Block): Boolean {
-            return block.state is Sign && Shop.isShopSign(block.state as Sign)
+            return isShopSign(block.state)
+        }
+
+        fun isShopSign(blockState: BlockState): Boolean {
+            return blockState is Sign && Shop.isShopSign(blockState)
         }
 
         fun isRelevantToShopSign(block: Block): Boolean {
@@ -40,6 +45,10 @@ class Utils {
                 val wallSign = sign.blockData as WallSign
                 return@any it.getRelative(wallSign.facing.oppositeFace).location == block.location
             }
+        }
+
+        fun isRelevantToShopSign(blockState: BlockState): Boolean {
+            return isRelevantToShopSign(blockState.block)
         }
 
         fun getTextContent(component: Component): String {

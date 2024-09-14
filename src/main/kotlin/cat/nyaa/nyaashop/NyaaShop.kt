@@ -57,7 +57,9 @@ class NyaaShop : JavaPlugin() {
 
         getCommand("nyaashop")?.setExecutor(NyaaShopCommands(this))
 
-        Bukkit.getPluginManager().registerEvents(ShopEventListener(this), this)
+        Bukkit.getPluginManager().registerEvents(ShopPlayerListener(this), this)
+        Bukkit.getPluginManager()
+            .registerEvents(ShopEnvironmentListener(), this)
     }
 
     override fun onDisable() {

@@ -30,7 +30,7 @@ import org.bukkit.event.world.ChunkUnloadEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 
-class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
+class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
     private val shopDataManager = pluginInstance.getShopDataManager()
     private val shopCreationPermissionNode = "nyaashop.creation"
 
@@ -227,20 +227,6 @@ class ShopEventListener(private val pluginInstance: NyaaShop) : Listener {
             event.isCancelled = true
             if (pluginInstance.config.sendMessageOnStoppingPlayerBreaking)
                 event.player.sendMessage(pluginInstance.language.unableToBreak.produce())
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    fun onBlockExplode(event: BlockExplodeEvent) {
-        event.blockList().removeIf { block ->
-            isShopSign(block) || isRelevantToShopSign(block)
-        }
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    fun onEntityExplode(event: EntityExplodeEvent) {
-        event.blockList().removeIf { block ->
-            isShopSign(block) || isRelevantToShopSign(block)
         }
     }
 
