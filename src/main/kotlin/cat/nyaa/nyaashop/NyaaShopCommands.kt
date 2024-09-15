@@ -44,7 +44,13 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
             shopDataManager.getPlayerSelectedShopID(sender.uniqueId)
         val selectedShop =
             selectedShopID?.let { shopDataManager.getShopData(it) }
-                ?: return mutableListOf("list")
+                ?: return mutableListOf("list").filter {
+                    it.startsWith(
+                        args?.get(
+                            0
+                        ) ?: ""
+                    )
+                }.toMutableList()
 
         if (selectedShop.ownerUniqueID == sender.uniqueId) {
             // ns set item <mainhand|offhand>
@@ -213,7 +219,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     }
                     "price" -> {
                         val price = args[2].toDoubleOrNull()
-                        if (price == null) {
+                        if (price == null || price < 0) {
                             sender.sendMessage(
                                 pluginInstance.language.notValidNumber.produce(
                                     "input" to args[2]
@@ -230,7 +236,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
 
                     "tradelimit" -> {
                         val tradeLimit = args[2].toIntOrNull()
-                        if (tradeLimit == null) {
+                        if (tradeLimit == null || tradeLimit < 0) {
                             sender.sendMessage(pluginInstance.language.notValidNumber.produce())
                             return true
                         }
@@ -257,10 +263,10 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     return sendHelpAndReturn(sender)
                 }
                 val itemAmount = args[2].toIntOrNull()
-                if (itemAmount == null) {
+                if (itemAmount == null || itemAmount < 0) {
                     sender.sendMessage(
                         pluginInstance.language.notValidNumber.produce(
-                            "number" to args[2]
+                            "input" to args[2]
                         )
                     )
                     return true
@@ -344,16 +350,12 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     return sendHelpAndReturn(sender)
                 }
                 val itemAmount = args[1].toIntOrNull()
-                if (itemAmount == null) {
+                if (itemAmount == null || itemAmount <= 0) {
                     sender.sendMessage(
                         pluginInstance.language.notValidNumber.produce(
-                            "number" to args[1]
+                            "input" to args[1]
                         )
                     )
-                    return true
-                }
-                if (itemAmount <= 0) {
-                    sender.sendMessage(pluginInstance.language.notValidNumber.produce())
                     return true
                 }
                 if (shop.stock < itemAmount) {
@@ -438,16 +440,12 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     return sendHelpAndReturn(sender)
                 }
                 val itemAmount = args[1].toIntOrNull()
-                if (itemAmount == null) {
+                if (itemAmount == null || itemAmount <= 0) {
                     sender.sendMessage(
                         pluginInstance.language.notValidNumber.produce(
-                            "number" to args[1]
+                            "input" to args[1]
                         )
                     )
-                    return true
-                }
-                if (itemAmount <= 0) {
-                    sender.sendMessage(pluginInstance.language.notValidNumber.produce())
                     return true
                 }
                 val item = shop.itemStack
