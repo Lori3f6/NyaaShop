@@ -7,7 +7,6 @@ import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.getTextContent
 import cat.nyaa.nyaashop.magic.Utils.Companion.isPlayerHoldingSignDecorationItem
 import cat.nyaa.nyaashop.magic.Utils.Companion.isRelevantToShopSign
-import cat.nyaa.nyaashop.magic.Utils.Companion.isShopSign
 import com.destroystokyo.paper.MaterialTags
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
@@ -19,9 +18,7 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockBreakEvent
-import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.block.SignChangeEvent
-import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.bukkit.event.player.PlayerQuitEvent
@@ -63,6 +60,11 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
         if (pluginInstance.config.preventWallSignShopCreatingOnSign) {
             val blockAgainst = event.block.getRelative(data.facing.oppositeFace)
             if (MaterialTags.SIGNS.isTagged(blockAgainst.type)) return
+        }
+
+        if (pluginInstance.config.preventWallSignShopCreatingOnAir) {
+            val blockAgainst = event.block.getRelative(data.facing.oppositeFace)
+            if (blockAgainst.type.isAir) return
         }
 
         if (pluginInstance.config.forceWallSignShopCreatingWithGlass) {

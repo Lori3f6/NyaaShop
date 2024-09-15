@@ -17,5 +17,6 @@ class Config {
     val sendMessageOnPlayerLeavingStore = false
     val forceWallSignShopCreatingWithGlass = true
     val preventWallSignShopCreatingOnSign = true
+    val preventWallSignShopCreatingOnAir = true
     val sendMessageOnStoppingPlayerBreaking = false
 }
