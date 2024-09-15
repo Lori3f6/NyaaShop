@@ -7,7 +7,9 @@ import org.bukkit.block.Block
 import org.bukkit.block.BlockState
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockBurnEvent
 import org.bukkit.event.block.BlockExplodeEvent
+import org.bukkit.event.block.BlockIgniteEvent
 import org.bukkit.event.block.BlockPistonExtendEvent
 import org.bukkit.event.block.BlockPistonRetractEvent
 import org.bukkit.event.block.TNTPrimeEvent
@@ -60,8 +62,13 @@ class ShopEnvironmentListener : Listener {
         event.isCancelled = isProtected(event.block)
     }
 
-    @EventHandler
+    @EventHandler(ignoreCancelled = true)
     fun onBlockDestroy(event: BlockDestroyEvent) {
+        event.isCancelled = isProtected(event.block)
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    fun onBlockBurn(event: BlockBurnEvent) {
         event.isCancelled = isProtected(event.block)
     }
 }

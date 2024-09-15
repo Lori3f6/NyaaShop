@@ -31,6 +31,7 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 data class Shop(
