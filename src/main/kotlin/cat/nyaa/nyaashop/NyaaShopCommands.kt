@@ -551,30 +551,28 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                 .produce("player" to playerToLookup.name))
             shops.forEachIndexed { index, shop ->
                 commandSender.sendMessage(
-                    pluginInstance.language.shopDetail.produceAsComponent(
-                        "index" to index,
-                        "shopTitle" to shop.shopTitle(),
-                        "shopId" to shop.id,
-                        "worldX" to shop.worldX,
-                        "worldY" to shop.worldY,
-                        "worldZ" to shop.worldZ,
-                        "worldName" to (Bukkit.getWorld(shop.worldUniqueID)?.name
-                            ?: pluginInstance.language.worldNamePlaceHolderIfInvalid.produce()),
-                        "item" to ItemUtils.itemTextWithHover(shop.itemStack),
-                        "stock" to shop.stock,
-                        "shopCapacity" to shop.stockCapacity(),
-                        "tradeRemaining" to shop.remainingTradeStock(),
-                        "status" to Shop.checkStatus(shop).getStatusMessage()
-                    )
+                    shopDetailComponent(index, shop)
                 )
             }
         }
     }
 
-    private fun shopDetailComponent(shop: Shop): ComponentLike {
-        val component = Component.text()
-
-        return component
+    private fun shopDetailComponent(index: Int, shop: Shop): ComponentLike {
+        return pluginInstance.language.shopDetail.produceAsComponent(
+            "index" to index,
+            "shopTitle" to shop.shopTitle(),
+            "shopId" to shop.id,
+            "worldX" to shop.worldX,
+            "worldY" to shop.worldY,
+            "worldZ" to shop.worldZ,
+            "worldName" to (Bukkit.getWorld(shop.worldUniqueID)?.name
+                ?: pluginInstance.language.worldNamePlaceHolderIfInvalid.produce()),
+            "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+            "stock" to shop.stock,
+            "shopCapacity" to shop.stockCapacity(),
+            "tradeRemaining" to shop.remainingTradeStock(),
+            "status" to shop.getStatusMessage()
+        )
     }
 
     private fun sendMessageOrOfflineMessageIfUkitExist(

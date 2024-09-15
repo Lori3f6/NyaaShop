@@ -25,7 +25,7 @@ class Language {
         Text.of("{remaining} Remaining")
     )
     val shopInteractOwnerBuy = Text.of(
-        "&7You are viewing your {shopTitle} &8(&3#{id}&8)&7:",
+        "&7You are viewing your {shopTitle} &8(&3#{shopId}&8)&7:",
         "&7Item: &6{item} {changeItemButton}",
         "&7Price: &6{price} {currencyName} {changePriceButton}",
         "&7Stock: &6{stock} {addStockButton} {retrieveStockButton}",
@@ -33,7 +33,7 @@ class Language {
         "&7Click to manage your shop"
     )
     val shopInteractOwnerSell = Text.of(
-        "&7You are viewing your {shopTitle} &8(&3#{id}&8)&7:",
+        "&7You are viewing your {shopTitle} &8(&3#{shopId}&8)&7:",
         "&7Item: &6{item} {changeItemButton}",
         "&7Price: &6{price} {currencyName} {changePriceButton}",
         "&7Stock: &6{stock} {addStockButton} {retrieveStockButton}",
@@ -129,4 +129,15 @@ class Language {
     val shopStatusForDetailActive = Text.of("Active")
     val shopStatusForDetailStandBy = Text.of("StandingBy")
     val shopStatusForDetailInaccessible = Text.of("Inaccessible")
+    val descriptionForShopStatusActive =
+        Text.of("Your shop is loaded and ready for treading")
+    val descriptionForShopStatusStandBy =
+        Text.of("The chunk your shop belongs to is not loaded")
+    val descriptionForShopStatusInaccessible = Text.of(
+        "This shop is broken and no longer working",
+        "click to purge the shop",
+        "note: this action will retrieve all the stocks at a time"
+    )
+    val shopPurged = Text.of("Purged inaccessible shop {shopTitle}#{shopId}")
+    val shopNotPurged = Text.of("Unable to purge {shopTitle}#{shopId} for now, might because the location of shop isn't load anymore")
 }

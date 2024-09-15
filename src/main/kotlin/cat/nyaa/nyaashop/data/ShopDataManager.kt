@@ -16,7 +16,7 @@ class ShopDataManager(
     private val sqliteFile: File,
     private val pluginInstance: NyaaShop
 ) {
-    private val shopDBService: ShopDBService = ShopDBService(sqliteFile)
+    val shopDBService: ShopDBService = ShopDBService(sqliteFile)
     private val loadedShopMap = mutableMapOf<Int, Shop>()
     private val shopSelectionMap = mutableMapOf<UUID, Int>()
     private val changeItemButton = Utils.suggestCommandButtonOf(
@@ -184,7 +184,7 @@ class ShopDataManager(
                 ShopType.SELL -> pluginInstance.language.shopInteractOwnerSell
             }.produceAsComponent(
                 "shopTitle" to shop.shopTitle(),
-                "id" to shop.id,
+                "shopId" to shop.id,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
                 "changeItemButton" to changeItemButton,
                 "price" to shop.price,
@@ -207,7 +207,7 @@ class ShopDataManager(
             pluginInstance.language.shopInteractGuest.produceAsComponent(
                 "shopTitle" to shop.shopTitle(),
                 "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
-                "id" to shop.id,
+                "shopId" to shop.id,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
                 "price" to shop.price,
                 "tax" to shop.price * shopFeeRate(shop.type),

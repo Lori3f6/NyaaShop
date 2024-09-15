@@ -1,10 +1,16 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
+import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.blockFaceIntoYaw
 import cat.nyaa.nyaashop.magic.Utils.Companion.isLocationLoaded
 import cat.nyaa.ukit.api.UKitAPI
+import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import land.melon.lab.simplelanguageloader.utils.LocaleUtils
+import net.kyori.adventure.audience.Audience
+import net.kyori.adventure.identity.Identity
+import net.kyori.adventure.text.ComponentLike
+import net.kyori.adventure.text.event.ClickEvent
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.NamespacedKey
@@ -16,12 +22,16 @@ import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
 import org.bukkit.entity.Display
 import org.bukkit.entity.ItemDisplay
+import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.joml.Matrix4f
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 import kotlin.math.pow
 import kotlin.math.sqrt
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 
 data class Shop(
     var id: Int,
@@ -58,18 +68,32 @@ data class Shop(
             sign.update()
         }
 
-        fun checkStatus(shop: Shop): ShopStatus {
-            val world = shop.world()
-            if (world == null) return ShopStatus.INACCESSIBLE
-            if (!world.isLocationLoaded(
-                    shop.worldX,
-                    shop.worldZ
-                )
-            ) return ShopStatus.STANDBY
-            return when (shop.isShopValid()) {
-                true -> ShopStatus.ACTIVE
-                false -> ShopStatus.INACCESSIBLE
-            }
+        private fun purgeShopCallbackFunction(
+            audience: Audience, shopID: Int
+        ) { // privileged function without checking permission
+            val uniqueId = audience.get(Identity.UUID).getOrNull() ?: return
+            val player = Bukkit.getPlayer(uniqueId) ?: return
+            val shop =
+                NyaaShop.instance.getShopDataManager().shopDBService.getShopDataFromShopID(
+                    shopID
+                ) ?: return
+            if (shop.isShopValid()) return
+            NyaaShop.instance.logger.info("${player.name} is purging shop #$shopID by paper callback")
+            val isSuccess = shop.purge(player)
+            player.sendMessage(
+                if (isSuccess)
+                    NyaaShop.instance.language.shopPurged.produceAsComponent(
+                        "shopTitle" to shop.shopTitle(),
+                        "shopId" to shop.id,
+                        "item" to ItemUtils.itemTextWithHover(shop.itemStack),
+                        "stock" to shop.stock
+                    )
+                else
+                    NyaaShop.instance.language.shopNotPurged.produceAsComponent(
+                        "shopTitle" to shop.shopTitle(),
+                        "shopId" to shop.id
+                    )
+            )
         }
     }
 
@@ -183,13 +207,15 @@ data class Shop(
     }
 
     fun clearItemDisplay() {
-        val itemDisplayLoc = itemDisplayLocation()
-        itemDisplayLoc.getNearbyEntitiesByType(ItemDisplay::class.java, 1.0)
-            .forEach {
-                if (it.persistentDataContainer.get(
-                        shopIDPDCKey,
-                        PersistentDataType.INTEGER
-                    ) == id
+        val aboutItemDisplayLoc = Location(
+            world(), worldX.toDouble(), worldY.toDouble(), worldZ.toDouble()
+        )
+        aboutItemDisplayLoc.getNearbyEntitiesByType(
+            ItemDisplay::class.java, 3.0
+        ).forEach {
+            if (it.persistentDataContainer.get(
+                    shopIDPDCKey, PersistentDataType.INTEGER
+                ) == id
                 ) {
                     it.remove()
                 }
@@ -281,5 +307,53 @@ data class Shop(
         }
         sign.isWaxed = true
         sign.update()
+    }
+
+    fun checkStatus(): ShopStatus {
+        val world = world()
+        if (world == null) return ShopStatus.INACCESSIBLE
+        if (!world.isLocationLoaded(
+                worldX, worldZ
+            )
+        ) return ShopStatus.STANDBY
+        return when (isShopValid()) {
+            true -> ShopStatus.ACTIVE
+            false -> ShopStatus.INACCESSIBLE
+        }
+    }
+
+    fun purge(player: Player): Boolean { // need !isShopValid
+        if (isShopValid()) throw IllegalStateException("valid shop can't be purged: ${this.toString()}")
+        val world = world()
+        if (world != null) {
+            if (!world.isLocationLoaded(worldX, worldZ)) return false
+            clearItemDisplay()
+        }
+        player.addItemByDrop(itemStack, stock)
+        NyaaShop.instance.getShopDataManager().shopDBService.deleteShop(id)
+        return true
+    }
+
+    fun getStatusMessage(): ComponentLike {
+        return when (checkStatus()) {
+            ShopStatus.ACTIVE -> NyaaShop.instance.language.shopStatusForDetailActive.produceAsComponent()
+                .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusActive.produceAsComponent())
+
+            ShopStatus.STANDBY -> NyaaShop.instance.language.shopStatusForDetailStandBy.produceAsComponent()
+                .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusStandBy.produceAsComponent())
+
+            ShopStatus.INACCESSIBLE -> {
+                val shopID = this.id
+                NyaaShop.instance.language.shopStatusForDetailInaccessible.produceAsComponent()
+                    .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusInaccessible.produceAsComponent())
+                    .clickEvent(
+                        ClickEvent.callback({ audience ->
+                            purgeShopCallbackFunction(audience, shopID)
+                        }, { builder ->
+                            builder.uses(1).lifetime(3.minutes.toJavaDuration())
+                        })
+                    )
+            }
+        }
     }
 }

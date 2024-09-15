@@ -105,7 +105,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
                     ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
                     ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
                 },
-                "id" to shop.id
+                "shopId" to shop.id
             )
         )
     }
