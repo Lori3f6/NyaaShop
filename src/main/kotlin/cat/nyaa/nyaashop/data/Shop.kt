@@ -31,7 +31,6 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
 data class Shop(
@@ -154,6 +153,13 @@ data class Shop(
         return when (type) {
             ShopType.BUY -> (tradeLimit - stock).coerceAtLeast(0)
             ShopType.SELL -> stock
+        }
+    }
+
+    fun capacityAbleToTrade(): Int {
+        return when (type) {
+            ShopType.BUY -> tradeLimit
+            ShopType.SELL -> stockCapacity()
         }
     }
 

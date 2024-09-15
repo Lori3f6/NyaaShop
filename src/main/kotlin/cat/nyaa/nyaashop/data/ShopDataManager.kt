@@ -212,7 +212,8 @@ class ShopDataManager(
                 "price" to shop.price,
                 "tax" to shop.price * shopFeeRate(shop.type),
                 "currencyName" to pluginInstance.economyProvider.currencyNamePlural(),
-                "stock" to shop.stock,
+                "stock" to shop.remainingTradeStock(),
+                "capacityAbleToTrade" to shop.capacityAbleToTrade(),
                 "capacity" to shop.stockCapacity(),
                 "tradeButton" to when (shop.type) {
                     ShopType.SELL -> buyTradeButton
