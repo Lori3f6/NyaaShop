@@ -473,7 +473,9 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                     )
                 ) {
                     sender.sendMessage(
-                        pluginInstance.language.merchantNotEnoughMoney.produce()
+                        pluginInstance.language.merchantNotEnoughMoney.produce(
+                            "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name
+                        )
                     )
                     return true
                 }
