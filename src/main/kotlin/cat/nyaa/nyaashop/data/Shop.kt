@@ -248,6 +248,7 @@ data class Shop(
         itemDisplay.setRotation(blockFaceIntoYaw(getSignFacing()), 0F)
         itemDisplay.interpolationDuration = 20
         itemDisplay.interpolationDelay = 20
+        itemDisplay.teleportDuration = 20
         itemDisplay.persistentDataContainer.set(
             shopIDPDCKey,
             PersistentDataType.INTEGER, id

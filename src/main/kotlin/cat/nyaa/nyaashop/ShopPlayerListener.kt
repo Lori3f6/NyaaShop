@@ -7,6 +7,7 @@ import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.getTextContent
 import cat.nyaa.nyaashop.magic.Utils.Companion.isPlayerHoldingSignDecorationItem
 import cat.nyaa.nyaashop.magic.Utils.Companion.isRelevantToShopSign
+import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import com.destroystokyo.paper.MaterialTags
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
@@ -79,7 +80,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
 
         if (shopDataManager.countPlayerCreatedShops(event.player.uniqueId) >= pluginInstance.config.maximumShopsPerPlayer) {
             event.player.sendMessage(
-                pluginInstance.language.tooManyShops.produce(
+                pluginInstance.language.tooManyShops.producekt(
                     "limit" to pluginInstance.config.maximumShopsPerPlayer
                 )
             )
@@ -104,7 +105,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
         )
         shopDataManager.createNewShop(shop)
         event.player.sendMessage(
-            pluginInstance.language.shopCreated.produce(
+            pluginInstance.language.shopCreated.producekt(
                 "shopTitle" to when (shop.type) {
                     ShopType.SELL -> pluginInstance.language.sellShopTitle.produce()
                     ShopType.BUY -> pluginInstance.language.buyShopTitle.produce()
@@ -136,7 +137,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
                             shopDataManager
                                 .deleteShopData(shop)
                             event.player.sendMessage(
-                                pluginInstance.language.shopDeleted.produce(
+                                pluginInstance.language.shopDeleted.producekt(
                                     "shopTitle" to when (shop.type) {
                                         ShopType.BUY -> pluginInstance.language.buyShopTitle
                                         ShopType.SELL -> pluginInstance.language.buyShopTitle
@@ -159,52 +160,50 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
     fun forShopRightClick(event: PlayerInteractEvent) {
         if (event.action != Action.RIGHT_CLICK_BLOCK && event.action == Action.LEFT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
-        if (block.state is Sign) {
+        if (block.state !is Sign) return
             val sign = block.state as Sign
-            if (Shop.isShopSign(sign)) {
-                val shopID = Shop.getShopIDFromSign(sign) ?: return
-                shopDataManager.getShopData(shopID)
-                    ?.let { shop ->
-                        shopDataManager.makePlayerSelectShop(
-                            event.player.uniqueId,
+        if (!Shop.isShopSign(sign)) return
+        val shopID = Shop.getShopIDFromSign(sign) ?: return
+        shopDataManager.getShopData(shopID)
+            ?.let { shop ->
+                shopDataManager.makePlayerSelectShop(
+                    event.player.uniqueId,
+                    shop
+                )
+                if (shop.ownerUniqueID == event.player.uniqueId) {
+                    if (isPlayerHoldingSignDecorationItem(event.player)) {
+                        val mainHandItem =
+                            event.player.inventory.itemInMainHand
+                        val signSide = sign.getSide(Side.FRONT)
+                        when (mainHandItem.type) {
+                            Material.INK_SAC -> {
+                                signSide.isGlowingText = false
+                            }
+
+                            Material.GLOW_INK_SAC -> {
+                                signSide.isGlowingText = true
+                            }
+
+                            else -> {
+                                signSide.color =
+                                    mainHandItem.type.dyeColor()
+                            }
+                        }
+                        sign.update()
+                    }
+                    shopDataManager
+                        .sendShopDetailsMessageForOwner(
+                            event.player,
                             shop
                         )
-                        if (shop.ownerUniqueID == event.player.uniqueId) {
-                            if (isPlayerHoldingSignDecorationItem(event.player)) {
-                                val mainHandItem =
-                                    event.player.inventory.itemInMainHand
-                                val signSide = sign.getSide(Side.FRONT)
-                                when (mainHandItem.type) {
-                                    Material.INK_SAC -> {
-                                        signSide.isGlowingText = false
-                                    }
-
-                                    Material.GLOW_INK_SAC -> {
-                                        signSide.isGlowingText = true
-                                    }
-
-                                    else -> {
-                                        signSide.color =
-                                            mainHandItem.type.dyeColor()
-                                    }
-                                }
-                                sign.update()
-                            }
-                            shopDataManager
-                                .sendShopDetailsMessageForOwner(
-                                    event.player,
-                                    shop
-                                )
-                        } else {
-                            shopDataManager
-                                .sendShopDetailsMessageForGuest(
-                                    event.player,
-                                    shop
-                                )
-                        }
-                    } ?: return
-            }
-        }
+                } else {
+                    shopDataManager
+                        .sendShopDetailsMessageForGuest(
+                            event.player,
+                            shop
+                        )
+                }
+            } ?: return
     }
 
     @EventHandler
@@ -217,7 +216,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
             shopDataManager.clearPlayerSelectedShop(player.uniqueId)
             if (pluginInstance.config.sendMessageOnPlayerLeavingStore) {
                 player.sendMessage(
-                    pluginInstance.language.playerLeaveShop.produce(
+                    pluginInstance.language.playerLeaveShop.producekt(
                         "shopID" to shopID
                     )
                 )
@@ -242,7 +241,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
         event.chunk.tileEntities.filterIsInstance<Sign>().forEach { sign ->
             if (Shop.isShopSign(sign)) {
                 val shopID = Shop.getShopIDFromSign(sign) ?: return@forEach
-                val shop = shopDataManager.loadShop(shopID)
+                val shop = shopDataManager.loadShop(shopID, true)
                 if (shop == null) {
                     Shop.clearShopIDPDC(sign)
                     sign.world.getNearbyEntitiesByType(

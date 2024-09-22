@@ -3,13 +3,13 @@ package cat.nyaa.nyaashop.data
 import cat.nyaa.nyaashop.NyaaShop
 import cat.nyaa.nyaashop.data.db.ShopDBService
 import cat.nyaa.nyaashop.magic.Utils
+import cat.nyaa.nyaashop.magic.Utils.Companion.produceAsComponentkt
+import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import org.bukkit.Bukkit
 import org.bukkit.block.Sign
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import cat.nyaa.nyaashop.magic.Utils.Companion.produceAsComponentkt
-import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import java.io.File
 import java.util.*
 
@@ -68,12 +68,7 @@ class ShopDataManager(
                         if (Shop.isShopSign(sign)) {
                             val shopID =
                                 Shop.getShopIDFromSign(sign) ?: return@innerLoop
-                            val shop =
-                                shopDBService.getShopDataFromShopID(shopID)
-                                    ?: return@innerLoop
-                            loadedShopMap[shopID] = shop
-                            shop.refreshItemDisplay()
-                            pluginInstance.logger.info("Loaded shop #$shopID")
+                            loadShop(shopID, true)
                         }
                     }
             }
@@ -242,13 +237,13 @@ class ShopDataManager(
             shop.refreshItemDisplay()
             shop.updateSign()
         }
-        pluginInstance.logger.fine("Loaded shop #$shopID")
+        pluginInstance.logger.info("Loaded shop #$shopID")
         return shop
     }
 
     fun unloadShop(shopID: Int) {
         loadedShopMap.remove(shopID)
-        pluginInstance.logger.fine("Unloaded shop #$shopID")
+        pluginInstance.logger.info("Unloaded shop #$shopID")
     }
 
     fun getAllLoadedShops(): Collection<Shop> {
