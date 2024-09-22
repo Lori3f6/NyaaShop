@@ -8,6 +8,8 @@ import org.bukkit.Bukkit
 import org.bukkit.block.Sign
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import cat.nyaa.nyaashop.magic.Utils.Companion.produceAsComponentkt
+import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import java.io.File
 import java.util.*
 
@@ -20,40 +22,40 @@ class ShopDataManager(
     private val loadedShopMap = mutableMapOf<Int, Shop>()
     private val shopSelectionMap = mutableMapOf<UUID, Int>()
     private val changeItemButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.changeItemButtonText.produce(),
-        pluginInstance.language.changeItemButtonDescription.produce(),
+        pluginInstance.language.changeItemButtonText.producekt(),
+        pluginInstance.language.changeItemButtonDescription.producekt(),
         "/ns set item mainhand"
     )
     private val changePriceButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.changePriceButtonText.produce(),
-        pluginInstance.language.changePriceButtonDescription.produce(),
+        pluginInstance.language.changePriceButtonText.producekt(),
+        pluginInstance.language.changePriceButtonDescription.producekt(),
         "/ns set price "
     )
     private val addStockButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.addStockButtonText.produce(),
-        pluginInstance.language.addStockButtonDescription.produce(),
+        pluginInstance.language.addStockButtonText.producekt(),
+        pluginInstance.language.addStockButtonDescription.producekt(),
         "/ns stock add "
     )
     private val retrieveStockButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.retrieveStockButtonText.produce(),
-        pluginInstance.language.retrieveStockButtonDescription.produce(),
+        pluginInstance.language.retrieveStockButtonText.producekt(),
+        pluginInstance.language.retrieveStockButtonDescription.producekt(),
         "/ns stock retrieve "
     )
     private val changeTradeLimitButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.changeTradeLimitButtonText.produce(),
-        pluginInstance.language.changeTradeLimitButtonDescription.produce(
-            "sellShopTitle" to pluginInstance.language.sellShopTitle.produce()
+        pluginInstance.language.changeTradeLimitButtonText.producekt(),
+        pluginInstance.language.changeTradeLimitButtonDescription.producekt(
+            "sellShopTitle" to pluginInstance.language.sellShopTitle.producekt()
         ),
         "/ns set tradelimit "
     )
     private val buyTradeButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.buyTradeButtonText.produce(),
-        pluginInstance.language.buyTradeButtonDescription.produce(),
+        pluginInstance.language.buyTradeButtonText.producekt(),
+        pluginInstance.language.buyTradeButtonDescription.producekt(),
         "/ns buy "
     )
     private val sellTradeButton = Utils.suggestCommandButtonOf(
-        pluginInstance.language.sellTradeButtonText.produce(),
-        pluginInstance.language.sellTradeButtonDescription.produce(),
+        pluginInstance.language.sellTradeButtonText.producekt(),
+        pluginInstance.language.sellTradeButtonDescription.producekt(),
         "/ns sell "
     )
 
@@ -182,7 +184,7 @@ class ShopDataManager(
             when (shop.type) {
                 ShopType.BUY -> pluginInstance.language.shopInteractOwnerBuy
                 ShopType.SELL -> pluginInstance.language.shopInteractOwnerSell
-            }.produceAsComponent(
+            }.produceAsComponentkt(
                 "shopTitle" to shop.shopTitle(),
                 "shopId" to shop.id,
                 "item" to ItemUtils.itemTextWithHover(shop.itemStack),
@@ -196,7 +198,7 @@ class ShopDataManager(
                 "addStockButton" to addStockButton,
                 "retrieveStockButton" to retrieveStockButton,
                 "tradeLimit" to shop.tradeLimit,
-                "buyShopTitle" to pluginInstance.language.buyShopTitle.produce(),
+                "buyShopTitle" to pluginInstance.language.buyShopTitle.producekt(),
                 "changeTradeLimitButton" to changeTradeLimitButton
             )
         )
@@ -204,7 +206,7 @@ class ShopDataManager(
 
     fun sendShopDetailsMessageForGuest(player: Player, shop: Shop) {
         player.sendMessage(
-            pluginInstance.language.shopInteractGuest.produceAsComponent(
+            pluginInstance.language.shopInteractGuest.produceAsComponentkt(
                 "shopTitle" to shop.shopTitle(),
                 "owner" to Bukkit.getOfflinePlayer(shop.ownerUniqueID).name,
                 "shopId" to shop.id,
@@ -247,6 +249,10 @@ class ShopDataManager(
     fun unloadShop(shopID: Int) {
         loadedShopMap.remove(shopID)
         pluginInstance.logger.fine("Unloaded shop #$shopID")
+    }
+
+    fun getAllLoadedShops(): Collection<Shop> {
+        return Collections.unmodifiableCollection<Shop>(loadedShopMap.values)
     }
 
     private fun cleanUpSign(sign:Sign){

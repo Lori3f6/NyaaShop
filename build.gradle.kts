@@ -14,7 +14,7 @@ repositories {
 
 dependencies {
     testImplementation(kotlin("test"))
-    implementation("land.melon.lab:simplelanguageloader:1.13.11")
+    implementation("land.melon.lab:simplelanguageloader:1.14.2")
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     compileOnly("org.xerial:sqlite-jdbc:3.46.1.0")
     compileOnly("cat.nyaa:ecore:0.3.4")
@@ -35,7 +35,7 @@ tasks {
     shadowJar {
         archiveClassifier.set("all")
         dependencies {
-            include(dependency("land.melon.lab:simplelanguageloader:1.13.11"))
+            include(dependency("land.melon.lab:simplelanguageloader:1.14.2"))
         }
     }
 }

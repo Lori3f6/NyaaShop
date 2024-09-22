@@ -4,6 +4,8 @@ import cat.nyaa.nyaashop.NyaaShop
 import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.blockFaceIntoYaw
 import cat.nyaa.nyaashop.magic.Utils.Companion.isLocationLoaded
+import cat.nyaa.nyaashop.magic.Utils.Companion.produceAsComponentkt
+import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import cat.nyaa.ukit.api.UKitAPI
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import land.melon.lab.simplelanguageloader.utils.LocaleUtils
@@ -32,7 +34,6 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
-
 data class Shop(
     var id: Int,
     val ownerUniqueID: UUID,
@@ -82,14 +83,14 @@ data class Shop(
             val isSuccess = shop.purge(player)
             player.sendMessage(
                 if (isSuccess)
-                    NyaaShop.instance.language.shopPurged.produceAsComponent(
+                    NyaaShop.instance.language.shopPurged.produceAsComponentkt(
                         "shopTitle" to shop.shopTitle(),
                         "shopId" to shop.id,
                         "item" to ItemUtils.itemTextWithHover(shop.itemStack),
                         "stock" to shop.stock
                     )
                 else
-                    NyaaShop.instance.language.shopNotPurged.produceAsComponent(
+                    NyaaShop.instance.language.shopNotPurged.produceAsComponentkt(
                         "shopTitle" to shop.shopTitle(),
                         "shopId" to shop.id
                     )
@@ -119,6 +120,8 @@ data class Shop(
     private val itemDisplayMatrix = Matrix4f(
         0.62f, 0f, 0f, 0f, 0f, 0.62f, 0f, 0f, 0f, 0f, 0.62f, 0f, 0f, 0f, 0f, 1f
     )
+
+    var itemDisplay: ItemDisplay? = null
 
     private fun getSignBlock(): Block {
         return Bukkit.getWorld(worldUniqueID)
@@ -181,8 +184,8 @@ data class Shop(
     fun stockCapacity(): Int {
         return NyaaShop.instance.config.let { config ->
             if (config.makeShopInventoryCapacityPresentInSlotsSoItCalculatedByMaximumStackSizeOfItem)
-                itemStack.maxStackSize * config.shopInventoryCapacity1
-            else config.shopInventoryCapacity1
+                itemStack.maxStackSize * config.shopInventoryCapacity
+            else config.shopInventoryCapacity
         }
     }
 
@@ -201,8 +204,8 @@ data class Shop(
 
     fun shopTitle(): String {
         return when (type) {
-            ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.produce()
-            ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.produce()
+            ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.producekt()
+            ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.producekt()
         }
     }
 
@@ -227,6 +230,7 @@ data class Shop(
                     it.remove()
                 }
             }
+        itemDisplay = null
     }
 
     private fun createItemDisplay(): ItemDisplay {
@@ -242,10 +246,13 @@ data class Shop(
                 itemDisplayMatrix
         )
         itemDisplay.setRotation(blockFaceIntoYaw(getSignFacing()), 0F)
+        itemDisplay.interpolationDuration = 20
+        itemDisplay.interpolationDelay = 20
         itemDisplay.persistentDataContainer.set(
             shopIDPDCKey,
             PersistentDataType.INTEGER, id
         )
+        this.itemDisplay = itemDisplay
         return itemDisplay
     }
 
@@ -298,10 +305,10 @@ data class Shop(
         for (i in 0..3) {
             signSide.line(
                 i,
-                NyaaShop.instance.language.shopSign[i].produceAsComponent(
+                NyaaShop.instance.language.shopSign[i].produceAsComponentkt(
                     "title" to when (type) {
-                        ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.produce()
-                        ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.produce()
+                        ShopType.BUY -> NyaaShop.instance.language.buyShopTitle.producekt()
+                        ShopType.SELL -> NyaaShop.instance.language.sellShopTitle.producekt()
                     },
                     "item" to
                             LocaleUtils.getTranslatableItemComponent(itemStack),
@@ -343,16 +350,16 @@ data class Shop(
 
     fun getStatusMessage(): ComponentLike {
         return when (checkStatus()) {
-            ShopStatus.ACTIVE -> NyaaShop.instance.language.shopStatusForDetailActive.produceAsComponent()
-                .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusActive.produceAsComponent())
+            ShopStatus.ACTIVE -> NyaaShop.instance.language.shopStatusForDetailActive.produceAsComponentkt()
+                .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusActive.produceAsComponentkt())
 
-            ShopStatus.STANDBY -> NyaaShop.instance.language.shopStatusForDetailStandBy.produceAsComponent()
-                .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusStandBy.produceAsComponent())
+            ShopStatus.STANDBY -> NyaaShop.instance.language.shopStatusForDetailStandBy.produceAsComponentkt()
+                .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusStandBy.produceAsComponentkt())
 
             ShopStatus.INACCESSIBLE -> {
                 val shopID = this.id
-                NyaaShop.instance.language.shopStatusForDetailInaccessible.produceAsComponent()
-                    .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusInaccessible.produceAsComponent())
+                NyaaShop.instance.language.shopStatusForDetailInaccessible.produceAsComponentkt()
+                    .hoverEvent(NyaaShop.instance.language.descriptionForShopStatusInaccessible.produceAsComponentkt())
                     .clickEvent(
                         ClickEvent.callback({ audience ->
                             purgeShopCallbackFunction(audience, shopID)

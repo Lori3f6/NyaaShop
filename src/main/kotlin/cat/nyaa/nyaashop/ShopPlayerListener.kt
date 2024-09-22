@@ -56,16 +56,18 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
         if (isRelevantToShopSign(event.block.getRelative(data.facing.oppositeFace))) return
 
         val blockState = event.block.state as Sign
+        val blockAgainst = event.block.getRelative(data.facing.oppositeFace)
 
         if (pluginInstance.config.preventWallSignShopCreatingOnSign) {
-            val blockAgainst = event.block.getRelative(data.facing.oppositeFace)
             if (MaterialTags.SIGNS.isTagged(blockAgainst.type)) return
         }
 
         if (pluginInstance.config.preventWallSignShopCreatingOnAir) {
-            val blockAgainst = event.block.getRelative(data.facing.oppositeFace)
             if (blockAgainst.type.isAir) return
         }
+
+        if (blockAgainst.type in pluginInstance.config.preventWallSignShopCreatingOn)
+            return
 
         if (pluginInstance.config.forceWallSignShopCreatingWithGlass) {
             val blockAgainstThenUp =

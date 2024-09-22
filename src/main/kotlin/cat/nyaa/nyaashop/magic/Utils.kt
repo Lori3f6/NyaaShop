@@ -2,10 +2,10 @@ package cat.nyaa.nyaashop.magic
 
 import cat.nyaa.nyaashop.data.Shop
 import com.destroystokyo.paper.MaterialTags
+import land.melon.lab.simplelanguageloader.components.Text
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.TextComponent
 import net.kyori.adventure.text.event.ClickEvent
-import net.kyori.adventure.text.event.HoverEvent
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Material
 import org.bukkit.World
@@ -130,6 +130,26 @@ class Utils {
             val itemStack = itemStack.asOne()
             itemStack.amount = amount
             return inventory.removeItem(itemStack).isNullOrEmpty()
+        }
+
+        fun Text.producekt(vararg pairs: Pair<String, Any?>): String {
+            return produce(*pairs.map { pair ->
+                land.melon.lab.simplelanguageloader.utils.Pair(
+                    pair.first,
+                    pair.second
+                )
+            }
+                .toTypedArray<land.melon.lab.simplelanguageloader.utils.Pair<String, Any?>>())
+        }
+
+        fun Text.produceAsComponentkt(vararg pairs: Pair<String, Any?>): Component {
+            return this.produceAsComponent(*pairs.map { pair ->
+                land.melon.lab.simplelanguageloader.utils.Pair(
+                    pair.first,
+                    pair.second
+                )
+            }
+                .toTypedArray<land.melon.lab.simplelanguageloader.utils.Pair<String, Any?>>())
         }
     }
 }
