@@ -81,6 +81,7 @@ class NyaaShop : JavaPlugin() {
 
     override fun onDisable() {
         Bukkit.getAsyncScheduler().cancelTasks(this)
+        Bukkit.getScheduler().cancelTasks(this)
         HandlerList.unregisterAll(this)
         if (::dataManager.isInitialized) {
             dataManager.shutdown()
