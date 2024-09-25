@@ -140,4 +140,5 @@ class Language {
     )
     val shopPurged = Text.of("Purged inaccessible shop {shopTitle}#{shopId}")
     val shopNotPurged = Text.of("Unable to purge {shopTitle}#{shopId} for now, might because the location of shop isn't load anymore")
+    val deletedOthersEntry = Text.of("You deleted the entry of {owner}'s {shopTitle}#{shopId}")
 }

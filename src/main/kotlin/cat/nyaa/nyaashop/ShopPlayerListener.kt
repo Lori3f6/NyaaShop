@@ -3,12 +3,14 @@ package cat.nyaa.nyaashop
 import cat.nyaa.nyaashop.data.Shop
 import cat.nyaa.nyaashop.data.ShopType
 import cat.nyaa.nyaashop.magic.DyeMap.Companion.dyeColor
+import cat.nyaa.nyaashop.magic.Permissions
 import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.getTextContent
 import cat.nyaa.nyaashop.magic.Utils.Companion.isPlayerHoldingSignDecorationItem
 import cat.nyaa.nyaashop.magic.Utils.Companion.isRelevantToShopSign
 import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import com.destroystokyo.paper.MaterialTags
+import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
@@ -30,11 +32,10 @@ import org.bukkit.persistence.PersistentDataType
 
 class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
     private val shopDataManager = pluginInstance.getShopDataManager()
-    private val shopCreationPermissionNode = "nyaashop.creation"
 
     @EventHandler(ignoreCancelled = true)
     fun forSignCreation(event: SignChangeEvent) {
-        if (!event.player.hasPermission(shopCreationPermissionNode))
+        if (!event.player.hasPermission(Permissions.SHOP_CREATION.node))
             return
         val firstLine = event.line(0) ?: return
         val sellShop =
@@ -138,14 +139,27 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
                                 .deleteShopData(shop)
                             event.player.sendMessage(
                                 pluginInstance.language.shopDeleted.producekt(
-                                    "shopTitle" to when (shop.type) {
-                                        ShopType.BUY -> pluginInstance.language.buyShopTitle
-                                        ShopType.SELL -> pluginInstance.language.buyShopTitle
-                                    },
+                                    "shopTitle" to shop.shopTitle(),
                                     "shopID" to shopID
                                 )
                             )
                         } else {
+                            if (event.player.hasPermission(Permissions.SHOP_ADMIN.node)) {
+                                if (MaterialTags.AXES.isTagged(event.player.inventory.itemInMainHand.type)) {
+                                    shop.clearItemDisplay()
+                                    shopDataManager.unloadShop(shopID)
+                                    event.player.sendMessage(
+                                        pluginInstance.language.deletedOthersEntry.producekt(
+                                            "owner" to Bukkit.getOfflinePlayer(
+                                                shop.ownerUniqueID
+                                            ).name,
+                                            "shopTitle" to shop.shopTitle(),
+                                            "shopId" to shopID
+                                        )
+                                    )
+                                    return
+                                }
+                            }
                             event.isCancelled = true
                             if (pluginInstance.config.sendMessageOnStoppingPlayerBreaking) {
                                 event.player.sendMessage(pluginInstance.language.unableToBreak.produce())

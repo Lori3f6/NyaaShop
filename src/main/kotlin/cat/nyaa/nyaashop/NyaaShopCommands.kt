@@ -3,12 +3,13 @@ package cat.nyaa.nyaashop
 import cat.nyaa.ecore.ServiceFeePreference
 import cat.nyaa.nyaashop.data.Shop
 import cat.nyaa.nyaashop.data.ShopType
+import cat.nyaa.nyaashop.magic.Permissions
 import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
 import cat.nyaa.nyaashop.magic.Utils.Companion.hasAtLeast
 import cat.nyaa.nyaashop.magic.Utils.Companion.produceAsComponentkt
+import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import cat.nyaa.nyaashop.magic.Utils.Companion.removeItem
 import cat.nyaa.ukit.api.UKitAPI
-import cat.nyaa.nyaashop.magic.Utils.Companion.producekt
 import land.melon.lab.simplelanguageloader.utils.ItemUtils
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.ComponentLike
@@ -26,8 +27,6 @@ import java.util.UUID
 class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
     Listener {
     private val shopDataManager = pluginInstance.getShopDataManager()
-    private val adminPermissionNode = "nyaashop.admin"
-    private val playerPermissionNode = "nyaashop.use"
 
     override fun onTabComplete(
         sender: CommandSender,
@@ -39,20 +38,23 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
             return mutableListOf("reload")
         if (sender !is Player)
             return null
-        if(!sender.hasPermission(playerPermissionNode))
+        if(!sender.hasPermission(Permissions.SHOP_USE.node))
             return null
 
         val selectedShopID =
             shopDataManager.getPlayerSelectedShopID(sender.uniqueId)
         val selectedShop =
             selectedShopID?.let { shopDataManager.getShopData(it) }
-                ?: return mutableListOf("list").filter {
-                    it.startsWith(
-                        args?.get(
-                            0
-                        ) ?: ""
-                    )
-                }.toMutableList()
+                ?: return when {
+                    args.isNullOrEmpty() -> mutableListOf("list")
+                    args.size == 1 -> return mutableListOf("list").filter {
+                        it.startsWith(
+                            args[0]
+                        )
+                    }.toMutableList()
+
+                    else -> return mutableListOf()
+                }
 
         if (selectedShop.ownerUniqueID == sender.uniqueId) {
             // ns set item <mainhand|offhand>
@@ -129,7 +131,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         label: String,
         args: Array<out String>?
     ): Boolean {
-        if(!sender.hasPermission(playerPermissionNode)){
+        if (!sender.hasPermission(Permissions.SHOP_USE.node)) {
             sender.sendMessage(pluginInstance.language.permissionDenied.producekt())
             return true
         }
@@ -139,7 +141,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         }
 
         if (args[0].equals("reload", true)) {
-            if (sender.hasPermission(adminPermissionNode)) {
+            if (sender.hasPermission(Permissions.SHOP_RELOAD.node)) {
                 pluginInstance.reload()
                 sender.sendMessage(pluginInstance.language.pluginReloaded.producekt())
             } else {
@@ -156,7 +158,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         val senderPlayer = sender
 
         if (args[0].equals("list", true)) {
-            if (!senderPlayer.hasPermission(adminPermissionNode)) {
+            if (!senderPlayer.hasPermission(Permissions.SHOP_ADMIN.node)) {
                 runListCommand(senderPlayer, true, senderPlayer)
                 return true
             }
@@ -205,12 +207,12 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             )
                         ) EquipmentSlot.OFF_HAND else EquipmentSlot.HAND
                         val item = senderPlayer.inventory.getItem(slot).asOne()
-                        if (item.type.isAir) {
-                            sender.sendMessage(pluginInstance.language.unableToChangeItemToAir.producekt())
-                            return true
-                        }
                         if (shop.stock != 0) {
                             sender.sendMessage(pluginInstance.language.unableToChangeItemStock.producekt())
+                            return true
+                        }
+                        if (item.type.isAir) {
+                            sender.sendMessage(pluginInstance.language.unableToChangeItemToAir.producekt())
                             return true
                         }
                         shopDataManager.updateItemStack(shop.id, item)
