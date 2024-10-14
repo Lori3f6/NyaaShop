@@ -68,7 +68,7 @@ class ShopDataManager(
                         if (Shop.isShopSign(sign)) {
                             val shopID =
                                 Shop.getShopIDFromSign(sign) ?: return@innerLoop
-                            loadShop(shopID, true)
+                            loadShop(shopID)
                         }
                     }
             }
@@ -91,7 +91,7 @@ class ShopDataManager(
         return loadedShopMap[shopID]
     }
 
-    fun deleteShopData(shop: Shop) {
+    fun deleteShop(shop: Shop) {
         shopDBService.deleteShop(shop.id)
         loadedShopMap.remove(shop.id)
         shop.clearItemDisplay()
@@ -126,7 +126,7 @@ class ShopDataManager(
             shopData.itemStack = itemStack
             updateShopMetaToDB(shopData)
             shopData.updateSign()
-            shopData.refreshItemDisplay()
+            shopData.updateItemDisplay()
         }
     }
 
@@ -163,15 +163,14 @@ class ShopDataManager(
 
     fun createNewShop(shop: Shop) {
         val id = shopDBService.insertShop(shop)
-        loadedShopMap[id] = shop
         shop.id = id
         shop.initializeShopSign()
-        shop.refreshItemDisplay()
         pluginInstance.server.scheduler.runTaskLater(
             pluginInstance,
             { _ -> shop.updateSign() },
             1
         )
+        loadShop(id)
     }
 
     fun sendShopDetailsMessageForOwner(player: Player, shop: Shop) {
@@ -229,21 +228,18 @@ class ShopDataManager(
 
     fun loadShop(
         shopID: Int,
-        refreshItemDisplay: Boolean = false
     ): Shop? {
         val shop = shopDBService.getShopDataFromShopID(shopID) ?: return null
         loadedShopMap[shopID] = shop
-        if (refreshItemDisplay) {
-            shop.refreshItemDisplay()
-            shop.updateSign()
-        }
-        pluginInstance.logger.info("Loaded shop #$shopID")
+        shop.updateItemDisplay()
+
+        pluginInstance.logger.fine("Loaded shop #$shopID")
         return shop
     }
 
     fun unloadShop(shopID: Int) {
         loadedShopMap.remove(shopID)
-        pluginInstance.logger.info("Unloaded shop #$shopID")
+        pluginInstance.logger.fine("Unloaded shop #$shopID")
     }
 
     fun getAllLoadedShops(): Collection<Shop> {

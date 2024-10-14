@@ -1,7 +1,9 @@
 package cat.nyaa.nyaashop.data
 
 import cat.nyaa.nyaashop.NyaaShop
+import cat.nyaa.nyaashop.magic.Utils
 import cat.nyaa.nyaashop.magic.Utils.Companion.addItemByDrop
+import cat.nyaa.nyaashop.magic.Utils.Companion.asIntArray
 import cat.nyaa.nyaashop.magic.Utils.Companion.blockFaceIntoYaw
 import cat.nyaa.nyaashop.magic.Utils.Companion.isLocationLoaded
 import cat.nyaa.nyaashop.magic.Utils.Companion.produceAsComponentkt
@@ -23,6 +25,7 @@ import org.bukkit.block.Sign
 import org.bukkit.block.data.type.WallSign
 import org.bukkit.block.sign.Side
 import org.bukkit.entity.Display
+import org.bukkit.entity.Entity
 import org.bukkit.entity.ItemDisplay
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
@@ -49,6 +52,8 @@ data class Shop(
 ) {
     companion object {
         val shopIDPDCKey = NamespacedKey(NyaaShop.instance, "shop_id")
+        val shopDisplayUniqueIDPDCKey =
+            NamespacedKey(NyaaShop.instance, "display_uuid")
         fun isShopSign(sign: Sign): Boolean {
             return sign.persistentDataContainer.has(
                 shopIDPDCKey,
@@ -60,6 +65,15 @@ data class Shop(
             return sign.persistentDataContainer.get(
                 shopIDPDCKey,
                 PersistentDataType.INTEGER
+            )
+        }
+
+        fun getDisplayUniqueIDFromSign(sign: Sign): UUID? {
+            return Utils.getUniqueIDFromIntArray(
+                sign.persistentDataContainer.get(
+                    shopDisplayUniqueIDPDCKey,
+                    PersistentDataType.INTEGER_ARRAY
+                )
             )
         }
 
@@ -147,9 +161,41 @@ data class Shop(
         return baseBlock.location.apply { add(0.5, 1.5, 0.5) }
     }
 
-    fun refreshItemDisplay(): ItemDisplay {
-        clearItemDisplay()
-        return createItemDisplay()
+    fun updateItemDisplay(): ItemDisplay {
+        val sign = getSignBlock().state as Sign
+        var displayUniqueID = getDisplayUniqueIDFromSign(sign)
+
+        if (displayUniqueID == null || world()!!.getEntity(displayUniqueID) == null) {
+            val display = createItemDisplay()
+            sign.persistentDataContainer.set(
+                shopDisplayUniqueIDPDCKey,
+                PersistentDataType.INTEGER_ARRAY, display.uniqueId.asIntArray()
+            )
+            sign.update()
+            displayUniqueID = display.uniqueId
+        }
+
+        val display = world()!!.getEntity(displayUniqueID) as ItemDisplay
+        display.setItemStack(itemStack)
+        display.billboard = Display.Billboard.FIXED
+        display.setTransformationMatrix(
+            if (isSellingBlock())
+                blockDisplayMatrix
+            else
+                itemDisplayMatrix
+        )
+        display.interpolationDuration = 20
+        display.interpolationDelay = 20
+        display.teleportDuration = 20
+
+        Bukkit.getScheduler().runTaskLater(
+            NyaaShop.instance,
+            { _ -> clearUnusedItemDisplay() },
+            5L
+        )
+
+        this.itemDisplay = display
+        return display
     }
 
     fun remainingTradeStock(): Int {
@@ -216,44 +262,33 @@ data class Shop(
         )
     }
 
-    fun clearItemDisplay() {
+    fun clearUnusedItemDisplay() {
         val aboutItemDisplayLoc = Location(
             world(), worldX.toDouble(), worldY.toDouble(), worldZ.toDouble()
         )
         aboutItemDisplayLoc.getNearbyEntitiesByType(
-            ItemDisplay::class.java, 3.0
-        ).forEach {
-            if (it.persistentDataContainer.get(
-                    shopIDPDCKey, PersistentDataType.INTEGER
-                ) == id
-                ) {
-                    it.remove()
-                }
-            }
+            ItemDisplay::class.java, 5.0
+        ).filter {
+            it.persistentDataContainer.get(
+                shopIDPDCKey, PersistentDataType.INTEGER
+            ) == id && it != itemDisplay
+        }.forEach(Entity::remove)
+    }
+
+    fun clearItemDisplay() {
+        itemDisplay?.remove() ?: return
         itemDisplay = null
     }
 
     private fun createItemDisplay(): ItemDisplay {
         val location = itemDisplayLocation()
         val itemDisplay =
-            location.world?.spawn(location, ItemDisplay::class.java)
-        itemDisplay!!.setItemStack(itemStack)
-        itemDisplay.billboard = Display.Billboard.FIXED
-        itemDisplay.setTransformationMatrix(
-            if(isSellingBlock())
-                blockDisplayMatrix
-            else
-                itemDisplayMatrix
-        )
+            location.world!!.spawn(location, ItemDisplay::class.java)
         itemDisplay.setRotation(blockFaceIntoYaw(getSignFacing()), 0F)
-        itemDisplay.interpolationDuration = 20
-        itemDisplay.interpolationDelay = 20
-        itemDisplay.teleportDuration = 20
         itemDisplay.persistentDataContainer.set(
             shopIDPDCKey,
             PersistentDataType.INTEGER, id
         )
-        this.itemDisplay = itemDisplay
         return itemDisplay
     }
 
@@ -279,11 +314,13 @@ data class Shop(
                 true
             )
         }
-        updateSignStyleNextTick(sign)
+        sign.update()
+        updateSignStyleNextTick(block)
     }
 
-    fun updateSignStyleNextTick(sign: Sign) {
+    fun updateSignStyleNextTick(signBlock: Block) {
         Bukkit.getServer().scheduler.runTaskLater(NyaaShop.instance, { task ->
+            val sign = signBlock.state as Sign
             val signSide = sign.getSide(Side.FRONT)
             signSide.isGlowingText =
                 NyaaShop.instance.config.enableShopSignGlowing
@@ -342,6 +379,7 @@ data class Shop(
         val world = world()
         if (world != null) {
             if (!world.isLocationLoaded(worldX, worldZ)) return false
+            clearUnusedItemDisplay()
             clearItemDisplay()
         }
         player.addItemByDrop(itemStack, stock)

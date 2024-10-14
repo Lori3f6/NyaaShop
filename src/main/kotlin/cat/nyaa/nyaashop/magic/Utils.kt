@@ -17,6 +17,7 @@ import org.bukkit.block.data.type.WallSign
 import org.bukkit.entity.Item
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import java.util.UUID
 
 
 class Utils {
@@ -150,6 +151,28 @@ class Utils {
                 )
             }
                 .toTypedArray<land.melon.lab.simplelanguageloader.utils.Pair<String, Any?>>())
+        }
+
+        fun UUID.asIntArray(): IntArray{
+            val mostSigBits = this.mostSignificantBits
+            val leastSigBits = this.leastSignificantBits
+
+            return intArrayOf(
+                (mostSigBits shr 32).toInt(),
+                mostSigBits.toInt(),
+                (leastSigBits shr 32).toInt(),
+                leastSigBits.toInt()
+            )
+        }
+
+        fun getUniqueIDFromIntArray(intArray:IntArray?): UUID?{
+            if(intArray==null) return null
+            require(intArray.size >= 4) { "array length not enough, it shouldn't happen anyway" }
+
+            val mostSigBits = (intArray[0].toLong() shl 32) or (intArray[1].toLong() and 0xFFFFFFFFL)
+            val leastSigBits = (intArray[2].toLong() shl 32) or (intArray[3].toLong() and 0xFFFFFFFFL)
+
+            return UUID(mostSigBits, leastSigBits)
         }
     }
 }

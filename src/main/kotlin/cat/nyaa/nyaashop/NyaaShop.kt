@@ -1,7 +1,6 @@
 package cat.nyaa.nyaashop
 
 import cat.nyaa.ecore.EconomyCore
-import cat.nyaa.nyaashop.data.Shop
 import cat.nyaa.nyaashop.data.ShopDataManager
 import cat.nyaa.nyaashop.language.Language
 import land.melon.lab.simplelanguageloader.SimpleLanguageLoader
@@ -69,13 +68,14 @@ class NyaaShop : JavaPlugin() {
     }
 
     private fun rotateAllShopDisplay() {
+        val tps = Bukkit.getServer().tps[0]
         getShopDataManager().getAllLoadedShops()
             .filter { it.itemDisplay != null }.forEach { shop ->
                 val itemDisplay = shop.itemDisplay!!
                 val yaw = itemDisplay.yaw
                 itemDisplay.teleport(
                     itemDisplay.location.clone()
-                        .apply { setYaw(yaw + config.itemDisplayRotationSpeedInDegreesPerSecond.toFloat()) })
+                        .apply { setYaw(yaw - config.itemDisplayRotationSpeedInDegreesPerSecond.toFloat()) })
             }
     }
 

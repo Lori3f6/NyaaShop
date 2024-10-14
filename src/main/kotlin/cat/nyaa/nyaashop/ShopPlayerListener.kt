@@ -136,7 +136,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
                                 shop.stock
                             )
                             shopDataManager
-                                .deleteShopData(shop)
+                                .deleteShop(shop)
                             event.player.sendMessage(
                                 pluginInstance.language.shopDeleted.producekt(
                                     "shopTitle" to shop.shopTitle(),
@@ -146,6 +146,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
                         } else {
                             if (event.player.hasPermission(Permissions.SHOP_ADMIN.node)) {
                                 if (MaterialTags.AXES.isTagged(event.player.inventory.itemInMainHand.type)) {
+                                    shop.clearUnusedItemDisplay()
                                     shop.clearItemDisplay()
                                     shopDataManager.unloadShop(shopID)
                                     event.player.sendMessage(
@@ -255,7 +256,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
         event.chunk.tileEntities.filterIsInstance<Sign>().forEach { sign ->
             if (Shop.isShopSign(sign)) {
                 val shopID = Shop.getShopIDFromSign(sign) ?: return@forEach
-                val shop = shopDataManager.loadShop(shopID, true)
+                val shop = shopDataManager.loadShop(shopID)
                 if (shop == null) {
                     Shop.clearShopIDPDC(sign)
                     sign.world.getNearbyEntitiesByType(
