@@ -246,7 +246,7 @@ class ShopDataManager(
         return Collections.unmodifiableCollection<Shop>(loadedShopMap.values)
     }
 
-    private fun cleanUpSign(sign:Sign){
+    private fun cleanUpSign(sign: Sign) {
         sign.persistentDataContainer.remove(Shop.shopIDPDCKey)
     }
 

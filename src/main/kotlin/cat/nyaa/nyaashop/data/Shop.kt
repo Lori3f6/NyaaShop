@@ -164,8 +164,9 @@ data class Shop(
     fun updateItemDisplay(): ItemDisplay {
         val sign = getSignBlock().state as Sign
         var displayUniqueID = getDisplayUniqueIDFromSign(sign)
+        var displayEntity =  if(displayUniqueID!=null) world()?.getEntity(displayUniqueID) as ItemDisplay else null
 
-        if (displayUniqueID == null || world()!!.getEntity(displayUniqueID) == null) {
+        if (displayUniqueID == null || displayEntity == null) {
             val display = createItemDisplay()
             sign.persistentDataContainer.set(
                 shopDisplayUniqueIDPDCKey,
@@ -173,20 +174,20 @@ data class Shop(
             )
             sign.update()
             displayUniqueID = display.uniqueId
+            displayEntity = display
         }
 
-        val display = world()!!.getEntity(displayUniqueID) as ItemDisplay
-        display.setItemStack(itemStack)
-        display.billboard = Display.Billboard.FIXED
-        display.setTransformationMatrix(
+        displayEntity.setItemStack(itemStack)
+        displayEntity.billboard = Display.Billboard.FIXED
+        displayEntity.setTransformationMatrix(
             if (isSellingBlock())
                 blockDisplayMatrix
             else
                 itemDisplayMatrix
         )
-        display.interpolationDuration = 20
-        display.interpolationDelay = 20
-        display.teleportDuration = 20
+        displayEntity.interpolationDuration = 20
+        displayEntity.interpolationDelay = 20
+        displayEntity.teleportDuration = 20
 
         Bukkit.getScheduler().runTaskLater(
             NyaaShop.instance,
@@ -194,8 +195,8 @@ data class Shop(
             5L
         )
 
-        this.itemDisplay = display
-        return display
+        this.itemDisplay = displayEntity
+        return displayEntity
     }
 
     fun remainingTradeStock(): Int {
