@@ -23,6 +23,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.Listener
 import org.bukkit.inventory.EquipmentSlot
 import java.util.UUID
+import kotlin.math.min
 
 class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
     Listener {
@@ -216,6 +217,10 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
                             return true
                         }
                         shopDataManager.updateItemStack(shop.id, item)
+                        shopDataManager.updateTradeLimit(
+                            shop.id,
+                            min(shop.tradeLimit, shop.stockCapacity())
+                        )
                         shopDataManager.sendShopDetailsMessageForOwner(
                             senderPlayer,
                             shop

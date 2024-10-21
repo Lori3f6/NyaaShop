@@ -46,7 +46,7 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
         val secondLine = event.line(1) ?: return
         val thirdLine = event.line(2)
         val price = getTextContent(secondLine).toDoubleOrNull() ?: return
-        val tradeLimit =
+        var tradeLimit =
             thirdLine?.let { getTextContent(it) }?.toIntOrNull()
                 ?: 0
         val offhandItem = event.player.inventory.itemInOffHand
@@ -88,6 +88,14 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
             return
         }
 
+        val itemToTrade = if (!offhandItem.type.isAir) offhandItem.clone()
+            .asOne() else ItemStack(
+            Material.MELON_SLICE, 1
+        )
+
+        tradeLimit =
+            tradeLimit.coerceIn(0..if (pluginInstance.config.makeShopInventoryCapacityPresentInSlotsSoItCalculatedByMaximumStackSizeOfItem) pluginInstance.config.shopInventoryCapacity * itemToTrade.maxStackSize else pluginInstance.config.shopInventoryCapacity)
+
         //shop creation
         val shop = Shop(
             -1,
@@ -97,11 +105,9 @@ class ShopPlayerListener(private val pluginInstance: NyaaShop) : Listener {
             event.block.y,
             event.block.z,
             if (sellShop) ShopType.SELL else ShopType.BUY,
-            if (!offhandItem.type.isAir) offhandItem.clone().asOne() else ItemStack(
-                Material.MELON_SLICE,1
-            ),
+            itemToTrade,
             0,
-            tradeLimit.coerceAtLeast(0),
+            tradeLimit,
             price
         )
         shopDataManager.createNewShop(shop)

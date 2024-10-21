@@ -33,6 +33,7 @@ import org.bukkit.persistence.PersistentDataType
 import org.joml.Matrix4f
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.time.Duration.Companion.minutes
@@ -164,7 +165,8 @@ data class Shop(
     fun updateItemDisplay(): ItemDisplay {
         val sign = getSignBlock().state as Sign
         var displayUniqueID = getDisplayUniqueIDFromSign(sign)
-        var displayEntity =  if(displayUniqueID!=null) world()?.getEntity(displayUniqueID) as ItemDisplay else null
+        var displayEntity =
+            if (displayUniqueID != null) world()?.getEntity(displayUniqueID) as ItemDisplay? else null
 
         if (displayUniqueID == null || displayEntity == null) {
             val display = createItemDisplay()
@@ -201,14 +203,14 @@ data class Shop(
 
     fun remainingTradeStock(): Int {
         return when (type) {
-            ShopType.BUY -> (tradeLimit - stock).coerceAtLeast(0)
+            ShopType.BUY -> (capacityAbleToTrade() - stock).coerceAtLeast(0)
             ShopType.SELL -> stock
         }
     }
 
     fun capacityAbleToTrade(): Int {
         return when (type) {
-            ShopType.BUY -> tradeLimit
+            ShopType.BUY -> min(tradeLimit, stockCapacity())
             ShopType.SELL -> stockCapacity()
         }
     }
