@@ -15,9 +15,9 @@ repositories {
 dependencies {
     testImplementation(kotlin("test"))
     implementation("land.melon.lab:simplelanguageloader:1.14.2")
-    compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
-    compileOnly("org.xerial:sqlite-jdbc:3.46.1.0")
-    compileOnly("cat.nyaa:ecore:0.3.4")
+    compileOnly("io.papermc.paper:paper-api:1.21.8-R0.1-SNAPSHOT")
+    compileOnly("org.xerial:sqlite-jdbc:3.50.3.0")
+    compileOnly("cat.nyaa:ecore:0.3.5")
     compileOnly("cat.nyaa:ukit:1.7.2")
 }
 

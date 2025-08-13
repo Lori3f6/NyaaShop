@@ -3,8 +3,8 @@ main: cat.nyaa.nyaashop.NyaaShop
 version: ${version}
 api-version: 1.21
 libraries:
-  - "org.xerial:sqlite-jdbc:3.46.1.0"
-  - "org.jetbrains.kotlin:kotlin-stdlib:2.0.20"
+  - "org.xerial:sqlite-jdbc:3.50.3.0"
+  - "org.jetbrains.kotlin:kotlin-stdlib:2.2.0"
 depend:
   - ECore
 softdepend:

@@ -33,7 +33,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         sender: CommandSender,
         command: Command,
         label: String,
-        args: Array<out String>?
+        args: Array<out String>
     ): MutableList<String>? {
         if (sender is ConsoleCommandSender)
             return mutableListOf("reload")
@@ -130,7 +130,7 @@ class NyaaShopCommands(private val pluginInstance: NyaaShop) : TabExecutor,
         sender: CommandSender,
         command: Command,
         label: String,
-        args: Array<out String>?
+        args: Array<out String>
     ): Boolean {
         if (!sender.hasPermission(Permissions.SHOP_USE.node)) {
             sender.sendMessage(pluginInstance.language.permissionDenied.producekt())
